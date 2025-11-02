@@ -256,7 +256,7 @@
     penGroup.add(penTip);
 
     // Pen barrel (cylinder)
-    const barrelHeight = 5;
+    const barrelHeight = 4;
     const barrelGeometry = new THREE.CylinderGeometry(0.15, 0.15, barrelHeight, 16);
     const barrelTexture = checkerboardTexture.clone();
     barrelTexture.needsUpdate = true;
@@ -280,40 +280,49 @@
     let tiltAltitude = 30; // degrees
     let tiltAzimuth = 0; // degrees
 
-    // Calculate pen position and rotation based on distance and tilt
-    function updatePenTransform(distance, altitude, azimuth) {
-        // Tablet is at y=0, height is 0.5, so top surface is at y=0.25
-        const tabletTopY = 0.25;
-        const tipLength = 0.5;
-        
-        // Convert angles to radians
-        const altitudeRad = (altitude * Math.PI) / 180;
-        const azimuthRad = (azimuth * Math.PI) / 180;
-        
-        // The tip contact point on the tablet (fixed in world space)
-        // Center of tablet is at (0, 0, 0)
-        const tipContactX = 0;
-        const tipContactY = tabletTopY + distance;
-        const tipContactZ = 0;
-        // Set pen rotation using ZYX Euler order
-        // First rotate around Y (azimuth), then tilt around local X (altitude)
-        penGroup.rotation.order = 'YXZ';
-        penGroup.rotation.set(altitudeRad, azimuthRad, 0);
-        
-        // Calculate offset from tip to penGroup origin in local pen coordinates
-        // In local coords, tip is at (0, -tipLength, 0) relative to penGroup
-        const tipOffsetLocal = new THREE.Vector3(0, -tipLength, 0);
-        
-        // Transform this offset to world coordinates using pen's rotation
-        const tipOffsetWorld = tipOffsetLocal.clone().applyEuler(penGroup.rotation);
-        
-        // Position penGroup so that tip is at contact point
-        penGroup.position.set(
-            tipContactX - tipOffsetWorld.x,
-            tipContactY - tipOffsetWorld.y,
-            tipContactZ - tipOffsetWorld.z
-        );
-    }
+        // Calculate pen position and rotation based on distance and tilt
+        function updatePenTransform(distance, altitude, azimuth) {
+            // Tablet is at y=0, height is 0.5, so top surface is at y=0.25
+            const tabletTopY = 0.25;
+            const tipLength = 0.5;
+            
+            // Convert angles to radians
+            const altitudeRad = (altitude * Math.PI) / 180;
+            const azimuthRad = (azimuth * Math.PI) / 180;
+            
+            // The tip contact point on the tablet (fixed in world space)
+            // Center of tablet is at (0, 0, 0)
+            const tipContactX = 0;
+            const tipContactY = tabletTopY + distance;
+            const tipContactZ = 0;
+            
+            // Set pen rotation
+            penGroup.rotation.set(0, 0, 0);
+            
+            // Only apply azimuth rotation if there's tilt
+            if (Math.abs(altitude) > 0.01) {
+                // First rotate around Y axis for azimuth
+                penGroup.rotation.y = azimuthRad;
+                // Then tilt around local X axis
+                penGroup.rotation.x = altitudeRad;
+                penGroup.rotation.order = 'YXZ';
+            }
+            // If altitude is zero, pen stays vertical regardless of azimuth
+            
+            // Calculate offset from tip to penGroup origin in local pen coordinates
+            // In local coords, tip is at (0, -tipLength, 0) relative to penGroup
+            const tipOffsetLocal = new THREE.Vector3(0, -tipLength, 0);
+            
+            // Transform this offset to world coordinates using pen's rotation
+            const tipOffsetWorld = tipOffsetLocal.clone().applyEuler(penGroup.rotation);
+            
+            // Position penGroup so that tip is at contact point
+            penGroup.position.set(
+                tipContactX - tipOffsetWorld.x,
+                tipContactY - tipOffsetWorld.y,
+                tipContactZ - tipOffsetWorld.z
+            );
+        }
 
     // Initialize pen position
     updatePenTransform(0, tiltAltitude, tiltAzimuth);
