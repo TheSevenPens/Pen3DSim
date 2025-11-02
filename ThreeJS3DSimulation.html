@@ -176,7 +176,7 @@
     scene.add(ambientLight);
 
     const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-    directionalLight.position.set(10, 20, 10);
+    directionalLight.position.set(0, 20, 0);
     directionalLight.castShadow = true;
     directionalLight.shadow.mapSize.width = 2048;
     directionalLight.shadow.mapSize.height = 2048;
@@ -254,10 +254,10 @@
         const azimuthRad = (azimuth * Math.PI) / 180;
         
         // The tip contact point on the tablet (fixed in world space)
-        const tipContactX = 3;
+        // Center of tablet is at (0, 0, 0)
+        const tipContactX = 0;
         const tipContactY = tabletTopY + distance;
-        const tipContactZ = 2;
-        
+        const tipContactZ = 0;
         // Set pen rotation using ZYX Euler order
         // First rotate around Y (azimuth), then tilt around local X (altitude)
         penGroup.rotation.order = 'YXZ';
