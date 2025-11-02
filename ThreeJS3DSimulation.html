@@ -253,18 +253,29 @@
         const altitudeRad = (altitude * Math.PI) / 180;
         const azimuthRad = (azimuth * Math.PI) / 180;
         
-        // Set pen rotation
-        // Apply azimuth (rotation around Y axis) and altitude (tilt from vertical)
-        penGroup.rotation.set(0, azimuthRad, altitudeRad);
+        // The tip contact point on the tablet (fixed in world space)
+        const tipContactX = 3;
+        const tipContactY = tabletTopY + distance;
+        const tipContactZ = 2;
         
-        // Calculate position
-        // The tip point is tipLength below the penGroup origin
-        // We need to account for the tilt when positioning
-        const penGroupY = tabletTopY + distance + tipLength * Math.cos(altitudeRad);
-        const penGroupX = 3 + tipLength * Math.sin(altitudeRad) * Math.cos(azimuthRad);
-        const penGroupZ = 2 + tipLength * Math.sin(altitudeRad) * Math.sin(azimuthRad);
+        // Set pen rotation using ZYX Euler order
+        // First rotate around Y (azimuth), then tilt around local X (altitude)
+        penGroup.rotation.order = 'YXZ';
+        penGroup.rotation.set(altitudeRad, azimuthRad, 0);
         
-        penGroup.position.set(penGroupX, penGroupY, penGroupZ);
+        // Calculate offset from tip to penGroup origin in local pen coordinates
+        // In local coords, tip is at (0, -tipLength, 0) relative to penGroup
+        const tipOffsetLocal = new THREE.Vector3(0, -tipLength, 0);
+        
+        // Transform this offset to world coordinates using pen's rotation
+        const tipOffsetWorld = tipOffsetLocal.clone().applyEuler(penGroup.rotation);
+        
+        // Position penGroup so that tip is at contact point
+        penGroup.position.set(
+            tipContactX - tipOffsetWorld.x,
+            tipContactY - tipOffsetWorld.y,
+            tipContactZ - tipOffsetWorld.z
+        );
     }
 
     // Initialize pen position
