@@ -208,27 +208,64 @@
     // Create the digital pen
     const penGroup = new THREE.Group();
 
+    // Create checkerboard texture for pen
+    function createCheckerboardTexture() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 512;
+        canvas.height = 512;
+        const context = canvas.getContext('2d');
+        
+        const checkSize = 256; // Larger checker squares
+        const checksX = canvas.width / checkSize;
+        const checksY = canvas.height / checkSize;
+        
+        for (let y = 0; y < checksY; y++) {
+            for (let x = 0; x < checksX; x++) {
+                const isRed = (x + y) % 2 === 0;
+                context.fillStyle = isRed ? '#ff0000' : '#0000ff';
+                context.fillRect(x * checkSize, y * checkSize, checkSize, checkSize);
+            }
+        }
+        
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.magFilter = THREE.NearestFilter;
+        texture.minFilter = THREE.NearestFilter;
+        return texture;
+    }
+
+    const checkerboardTexture = createCheckerboardTexture();
+    checkerboardTexture.wrapS = THREE.RepeatWrapping;
+    checkerboardTexture.wrapT = THREE.RepeatWrapping;
+
     // Pen tip (cone)
     const tipHeight = 0.5;
     const tipGeometry = new THREE.ConeGeometry(0.1, tipHeight, 16);
+    const tipTexture = checkerboardTexture.clone();
+    tipTexture.needsUpdate = true;
+    tipTexture.repeat.set(2, 1);
+        
     const tipMaterial = new THREE.MeshStandardMaterial({
-        color: 0x2c3e50,
-        roughness: 0.2,
-        metalness: 0.8
+        map: tipTexture,
+        roughness: 0.8,
+        metalness: 0.1
     });
     const penTip = new THREE.Mesh(tipGeometry, tipMaterial);
     penTip.castShadow = true;
-    penTip.rotation.x = Math.PI; // Rotate 180 degrees to point tip downward
+    penTip.rotation.x = Math.PI;
     penTip.position.y = -tipHeight / 2;
     penGroup.add(penTip);
 
     // Pen barrel (cylinder)
     const barrelHeight = 5;
     const barrelGeometry = new THREE.CylinderGeometry(0.15, 0.15, barrelHeight, 16);
+    const barrelTexture = checkerboardTexture.clone();
+    barrelTexture.needsUpdate = true;
+    barrelTexture.repeat.set(2, 2);
+        
     const barrelMaterial = new THREE.MeshStandardMaterial({
-        color: 0x34495e,
-        roughness: 0.4,
-        metalness: 0.6
+        map: barrelTexture,
+        roughness: 0.8,
+        metalness: 0.1
     });
     const penBarrel = new THREE.Mesh(barrelGeometry, barrelMaterial);
     penBarrel.castShadow = true;
@@ -236,7 +273,7 @@
     penGroup.add(penBarrel);
 
     // Position the pen above the tablet
-    penGroup.position.set(3, 0, 2);
+    penGroup.position.set(0, 0, 0);
     scene.add(penGroup);
 
     // Pen tilt parameters
