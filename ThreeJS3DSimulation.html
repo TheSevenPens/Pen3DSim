@@ -187,7 +187,7 @@
     scene.add(pointLight);
 
     // Create the tablet (16" x 9" x 0.5")
-    const geometry = new THREE.BoxGeometry(16, 0.5, 9);
+    const geometry = new THREE.BoxGeometry(16, 0.1, 9);
     const material = new THREE.MeshStandardMaterial({
         color: 0x3498db,
         roughness: 0.7,
@@ -282,8 +282,8 @@
 
         // Calculate pen position and rotation based on distance and tilt
         function updatePenTransform(distance, altitude, azimuth) {
-            // Tablet is at y=0, height is 0.5, so top surface is at y=0.25
-            const tabletTopY = 0.25;
+            // Tablet is at y=0, height is 0.1, so top surface is at y=0.05
+            const tabletTopY = 0.05;
             const tipLength = 0.5;
             
             // Convert angles to radians
