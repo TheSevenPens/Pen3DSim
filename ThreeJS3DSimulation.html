@@ -213,6 +213,37 @@
     );
     tablet.add(wireframe);
 
+    // Add grid lines on tablet surface (0.5 inch intervals)
+    const gridGroup = new THREE.Group();
+    const gridMaterial = new THREE.LineBasicMaterial({ color: 0x5a5a5a, linewidth: 1 });
+
+    const tabletWidth = 16; // inches
+    const tabletDepth = 9; // inches
+    const gridSpacing = 0.5; // inches
+    const yOffset = 0.051; // slightly above tablet surface to prevent z-fighting
+
+    // Create vertical lines (parallel to Z axis)
+    for (let x = -tabletWidth / 2; x <= tabletWidth / 2; x += gridSpacing) {
+        const points = [];
+        points.push(new THREE.Vector3(x, yOffset, -tabletDepth / 2));
+        points.push(new THREE.Vector3(x, yOffset, tabletDepth / 2));
+        const lineGeometry = new THREE.BufferGeometry().setFromPoints(points);
+        const line = new THREE.Line(lineGeometry, gridMaterial);
+        gridGroup.add(line);
+    }
+
+    // Create horizontal lines (parallel to X axis)
+    for (let z = -tabletDepth / 2; z <= tabletDepth / 2; z += gridSpacing) {
+        const points = [];
+        points.push(new THREE.Vector3(-tabletWidth / 2, yOffset, z));
+        points.push(new THREE.Vector3(tabletWidth / 2, yOffset, z));
+        const lineGeometry = new THREE.BufferGeometry().setFromPoints(points);
+        const line = new THREE.Line(lineGeometry, gridMaterial);
+        gridGroup.add(line);
+    }
+
+    scene.add(gridGroup);
+
     // Create the digital pen
     const penGroup = new THREE.Group();
 
