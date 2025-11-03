@@ -197,9 +197,9 @@
     // Create the tablet (16" x 9" x 0.5")
     const geometry = new THREE.BoxGeometry(16, 0.1, 9);
     const material = new THREE.MeshStandardMaterial({
-        color: 0x3498db,
+        color: 0x505050,
         roughness: 0.7,
-        metalness: 0.1
+        metalness: 0.2
     });
     const tablet = new THREE.Mesh(geometry, material);
     tablet.castShadow = true;
@@ -209,7 +209,7 @@
     // Add wireframe to tablet
     const wireframe = new THREE.LineSegments(
         new THREE.EdgesGeometry(geometry),
-        new THREE.LineBasicMaterial({ color: 0xffffff, linewidth: 1 })
+        new THREE.LineBasicMaterial({ color: 0x808080, linewidth: 1 })
     );
     tablet.add(wireframe);
 
