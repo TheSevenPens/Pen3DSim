@@ -276,46 +276,52 @@
     penGroup.position.set(0, 0, 0);
     scene.add(penGroup);
 
-    // Pen tilt parameters
-    let tiltAltitude = 30; // degrees
-    let tiltAzimuth = 0; // degrees
+        // Pen tilt parameters
+        let tiltAltitude = 30; // degrees
+        let tiltAzimuth = 0; // degrees
 
-        // Calculate pen position and rotation based on distance and tilt
+        // Calculate pen position and rotation based on distance and tilt using quaternions
         function updatePenTransform(distance, altitude, azimuth) {
             // Tablet is at y=0, height is 0.1, so top surface is at y=0.05
             const tabletTopY = 0.05;
             const tipLength = 0.5;
-            
+        
             // Convert angles to radians
             const altitudeRad = (altitude * Math.PI) / 180;
             const azimuthRad = (azimuth * Math.PI) / 180;
-            
+        
             // The tip contact point on the tablet (fixed in world space)
-            // Center of tablet is at (0, 0, 0)
             const tipContactX = 0;
             const tipContactY = tabletTopY + distance;
             const tipContactZ = 0;
+        
+            // Create quaternion for pen rotation
+            // Start with identity (pen pointing up)
+            const quaternion = new THREE.Quaternion();
             
-            // Set pen rotation
-            penGroup.rotation.set(0, 0, 0);
-            
-            // Only apply azimuth rotation if there's tilt
+            // Only apply rotation if there's tilt
             if (Math.abs(altitude) > 0.01) {
-                // First rotate around Y axis for azimuth
-                penGroup.rotation.y = azimuthRad;
-                // Then tilt around local X axis
-                penGroup.rotation.x = altitudeRad;
-                penGroup.rotation.order = 'YXZ';
+                // Create quaternion for azimuth rotation (around Y axis)
+                const azimuthQuat = new THREE.Quaternion();
+                azimuthQuat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), azimuthRad);
+                
+                // Create quaternion for altitude rotation (around X axis in local space)
+                const altitudeQuat = new THREE.Quaternion();
+                altitudeQuat.setFromAxisAngle(new THREE.Vector3(1, 0, 0), altitudeRad);
+                
+                // Combine rotations: first azimuth, then altitude
+                quaternion.multiplyQuaternions(azimuthQuat, altitudeQuat);
             }
-            // If altitude is zero, pen stays vertical regardless of azimuth
             
+            // Apply quaternion to pen
+            penGroup.setRotationFromQuaternion(quaternion);
+        
             // Calculate offset from tip to penGroup origin in local pen coordinates
-            // In local coords, tip is at (0, -tipLength, 0) relative to penGroup
             const tipOffsetLocal = new THREE.Vector3(0, -tipLength, 0);
-            
-            // Transform this offset to world coordinates using pen's rotation
-            const tipOffsetWorld = tipOffsetLocal.clone().applyEuler(penGroup.rotation);
-            
+        
+            // Transform this offset to world coordinates using pen's quaternion
+            const tipOffsetWorld = tipOffsetLocal.clone().applyQuaternion(quaternion);
+        
             // Position penGroup so that tip is at contact point
             penGroup.position.set(
                 tipContactX - tipOffsetWorld.x,
@@ -323,6 +329,8 @@
                 tipContactZ - tipOffsetWorld.z
             );
         }
+
+        // Initialize pen position
 
     // Initialize pen position
     updatePenTransform(0, tiltAltitude, tiltAzimuth);
