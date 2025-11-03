@@ -305,47 +305,43 @@
             const tipContactY = tabletTopY + distance;
             const tipContactZ = 0;
         
-            // Create quaternion for pen rotation
-            // Start with identity (pen pointing up)
-            const quaternion = new THREE.Quaternion();
-            
-            // Only apply rotation if there's tilt
-            if (Math.abs(altitude) > 0.01) {
-                // Create quaternion for azimuth rotation (around Y axis)
+                // Create quaternions for each rotation
+                // Azimuth rotation (around world Y axis)
                 const azimuthQuat = new THREE.Quaternion();
                 azimuthQuat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), azimuthRad);
-                
-                // Create quaternion for altitude rotation (around X axis in local space)
+            
+                // Altitude rotation (around X axis)
                 const altitudeQuat = new THREE.Quaternion();
                 altitudeQuat.setFromAxisAngle(new THREE.Vector3(1, 0, 0), altitudeRad);
-                
-                // Combine rotations: first azimuth, then altitude
-                quaternion.multiplyQuaternions(azimuthQuat, altitudeQuat);
+            
+                // Barrel rotation (around pen's long axis - Y axis in pen's local space)
+                const barrelQuat = new THREE.Quaternion();
+                barrelQuat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), barrelRad);
+            
+                // Combine rotations:
+                // 1. Start with barrel rotation (rotate around local Y before tilting)
+                // 2. Apply altitude tilt
+                // 3. Apply azimuth rotation
+                const quaternion = new THREE.Quaternion();
+                quaternion.multiplyQuaternions(altitudeQuat, barrelQuat);
+                quaternion.premultiply(azimuthQuat);
+            
+                // Apply quaternion to pen
+                penGroup.setRotationFromQuaternion(quaternion);
+        
+                // Calculate offset from tip to penGroup origin in local pen coordinates
+                const tipOffsetLocal = new THREE.Vector3(0, -tipLength, 0);
+        
+                // Transform this offset to world coordinates using pen's quaternion
+                const tipOffsetWorld = tipOffsetLocal.clone().applyQuaternion(quaternion);
+        
+                // Position penGroup so that tip is at contact point
+                penGroup.position.set(
+                    tipContactX - tipOffsetWorld.x,
+                    tipContactY - tipOffsetWorld.y,
+                    tipContactZ - tipOffsetWorld.z
+                );
             }
-            
-            // Create quaternion for barrel rotation (around pen's long axis - Y axis in local space)
-            const barrelQuat = new THREE.Quaternion();
-            barrelQuat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), barrelRad);
-            
-            // Apply barrel rotation in local space (after altitude and azimuth)
-            quaternion.multiply(barrelQuat);
-            
-            // Apply quaternion to pen
-            penGroup.setRotationFromQuaternion(quaternion);
-        
-            // Calculate offset from tip to penGroup origin in local pen coordinates
-            const tipOffsetLocal = new THREE.Vector3(0, -tipLength, 0);
-        
-            // Transform this offset to world coordinates using pen's quaternion
-            const tipOffsetWorld = tipOffsetLocal.clone().applyQuaternion(quaternion);
-        
-            // Position penGroup so that tip is at contact point
-            penGroup.position.set(
-                tipContactX - tipOffsetWorld.x,
-                tipContactY - tipOffsetWorld.y,
-                tipContactZ - tipOffsetWorld.z
-            );
-        }
 
         // Initialize pen position
         updatePenTransform(0, tiltAltitude, tiltAzimuth, barrelRotation);
@@ -359,6 +355,18 @@
         distanceValueDisplay.textContent = distance.toFixed(2);
         updatePenTransform(distance, tiltAltitude, tiltAzimuth, barrelRotation);
     });
+
+        // Barrel rotation slider
+        const barrelRotationSlider = document.getElementById('barrel-rotation');
+        const barrelRotationValueDisplay = document.getElementById('barrel-rotation-value');
+
+        barrelRotationSlider.addEventListener('input', (e) => {
+            barrelRotation = parseFloat(e.target.value);
+            barrelRotationValueDisplay.textContent = barrelRotation.toFixed(0);
+            const distance = parseFloat(penDistanceSlider.value);
+            console.log('Barrel Rotation:', barrelRotation, 'Distance:', distance, 'Altitude:', tiltAltitude, 'Azimuth:', tiltAzimuth);
+            updatePenTransform(distance, tiltAltitude, tiltAzimuth, barrelRotation);
+        });
 
     // Tilt altitude slider
     const tiltAltitudeSlider = document.getElementById('tilt-altitude');
