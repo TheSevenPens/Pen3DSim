@@ -126,6 +126,14 @@
         </div>
     </div>
 
+    <div class="control-group">
+        <label>Barrel Rotation</label>
+        <div class="slider-container">
+            <input type="range" id="barrel-rotation" min="0" max="359" step="1" value="0">
+            <div class="slider-value"><span id="barrel-rotation-value">0</span>°</div>
+        </div>
+    </div>
+
     <button id="export-btn">Export as PNG</button>
 </div>
 <div id="viewer">
@@ -279,9 +287,10 @@
         // Pen tilt parameters
         let tiltAltitude = 30; // degrees
         let tiltAzimuth = 0; // degrees
+        let barrelRotation = 0; // degrees
 
         // Calculate pen position and rotation based on distance and tilt using quaternions
-        function updatePenTransform(distance, altitude, azimuth) {
+        function updatePenTransform(distance, altitude, azimuth, barrel) {
             // Tablet is at y=0, height is 0.1, so top surface is at y=0.05
             const tabletTopY = 0.05;
             const tipLength = 0.5;
@@ -289,6 +298,7 @@
             // Convert angles to radians
             const altitudeRad = (altitude * Math.PI) / 180;
             const azimuthRad = (azimuth * Math.PI) / 180;
+            const barrelRad = (barrel * Math.PI) / 180;
         
             // The tip contact point on the tablet (fixed in world space)
             const tipContactX = 0;
@@ -313,6 +323,13 @@
                 quaternion.multiplyQuaternions(azimuthQuat, altitudeQuat);
             }
             
+            // Create quaternion for barrel rotation (around pen's long axis - Y axis in local space)
+            const barrelQuat = new THREE.Quaternion();
+            barrelQuat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), barrelRad);
+            
+            // Apply barrel rotation in local space (after altitude and azimuth)
+            quaternion.multiply(barrelQuat);
+            
             // Apply quaternion to pen
             penGroup.setRotationFromQuaternion(quaternion);
         
@@ -331,9 +348,7 @@
         }
 
         // Initialize pen position
-
-    // Initialize pen position
-    updatePenTransform(0, tiltAltitude, tiltAzimuth);
+        updatePenTransform(0, tiltAltitude, tiltAzimuth, barrelRotation);
 
     // Pen distance slider
     const penDistanceSlider = document.getElementById('pen-distance');
@@ -342,7 +357,7 @@
     penDistanceSlider.addEventListener('input', (e) => {
         const distance = parseFloat(e.target.value);
         distanceValueDisplay.textContent = distance.toFixed(2);
-        updatePenTransform(distance, tiltAltitude, tiltAzimuth);
+        updatePenTransform(distance, tiltAltitude, tiltAzimuth, barrelRotation);
     });
 
     // Tilt altitude slider
@@ -354,7 +369,7 @@
         altitudeValueDisplay.textContent = tiltAltitude.toFixed(0);
         const distance = parseFloat(penDistanceSlider.value);
         console.log('Altitude:', tiltAltitude, 'Distance:', distance, 'Azimuth:', tiltAzimuth);
-        updatePenTransform(distance, tiltAltitude, tiltAzimuth);
+        updatePenTransform(distance, tiltAltitude, tiltAzimuth, barrelRotation);
     });
 
     // Tilt azimuth slider
@@ -366,7 +381,7 @@
         azimuthValueDisplay.textContent = tiltAzimuth.toFixed(0);
         const distance = parseFloat(penDistanceSlider.value);
         console.log('Azimuth:', tiltAzimuth, 'Distance:', distance, 'Altitude:', tiltAltitude);
-        updatePenTransform(distance, tiltAltitude, tiltAzimuth);
+        updatePenTransform(distance, tiltAltitude, tiltAzimuth, barrelRotation);
     });
 
     // Grid helper
