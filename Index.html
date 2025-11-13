@@ -195,6 +195,7 @@
     scene.add(pointLight);
 
     // Create the tablet (16" x 9" x 0.5")
+
     const geometry = new THREE.BoxGeometry(16, 0.1, 9);
     const material = new THREE.MeshStandardMaterial({
         color: 0x505050,
@@ -429,8 +430,10 @@
     scene.add(gridHelper);
 
     // Axes helper
-    const axesHelper = new THREE.AxesHelper(10);
-    scene.add(axesHelper);
+    //const axesHelper = new THREE.AxesHelper(9);
+    //scene.add(axesHelper);
+
+
 
     // Add axis labels
     function createTextLabel(text, color, position) {
@@ -454,17 +457,51 @@
         return sprite;
     }
 
-    // X axis label (red)
-    const xLabel = createTextLabel('X', '#ff0000', new THREE.Vector3(11, 0, 0));
+    // Z,Y labels swapped to match how screen coordinates and tablet think about space
+    const xLabelUser = 'X';
+    const yLabelUser = 'Z';
+    const zLabelUser = 'Y';
+
+    const xLabelDistance = 11;
+    const yLabelDistance = 7;
+    const zLabelDistance = 8;
+
+    const xAxisColor = '#ff0000';
+    const yAxisColor = '#00ff00';
+    const zAxisColor = '#0000ff';
+    // axis labels
+    const xLabel = createTextLabel(xLabelUser, xAxisColor, new THREE.Vector3(xLabelDistance, 0, 0));
+    const yLabel = createTextLabel( yLabelUser , yAxisColor, new THREE.Vector3(0, yLabelDistance, 0));
+    const zLabel = createTextLabel(zLabelUser, zAxisColor , new THREE.Vector3(0, 0, zLabelDistance));
+
     scene.add(xLabel);
-
-    // Y axis label (green)
-    const yLabel = createTextLabel('Y', '#00ff00', new THREE.Vector3(0, 11, 0));
     scene.add(yLabel);
-
-    // Z axis label (blue)
-    const zLabel = createTextLabel('Z', '#0000ff', new THREE.Vector3(0, 0, 11));
     scene.add(zLabel);
+
+    const arrowPos = new THREE.Vector3(0, 0, 0);
+    const xArrow = new THREE.ArrowHelper(
+        new THREE.Vector3(1, 0, 0), // Direction
+        arrowPos,                   // Origin
+        xLabelDistance-0.5,             // Length
+        xAxisColor                    // Color
+    );
+
+    const yArrow = new THREE.ArrowHelper(
+        new THREE.Vector3(0, 1, 0), // Direction
+        arrowPos,                   // Origin
+        yLabelDistance-0.5,             // Length
+        yAxisColor                  // Color
+    );
+
+    const zArrow = new THREE.ArrowHelper(
+        new THREE.Vector3(0, 0, 1), // Direction
+        arrowPos,                   // Origin
+        zLabelDistance-0.5,             // Length
+        zAxisColor                  // Color
+    );
+    scene.add(xArrow);
+    scene.add(yArrow);
+    scene.add(zArrow);
 
     // Animation loop
     function animate() {
