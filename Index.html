@@ -258,11 +258,13 @@
         const checkSize = 256; // Larger checker squares
         const checksX = canvas.width / checkSize;
         const checksY = canvas.height / checkSize;
-        
+
+        const checkColor1 = '#ee66dd';
+        const checkColor2 = '#aa33bb';
         for (let y = 0; y < checksY; y++) {
             for (let x = 0; x < checksX; x++) {
-                const isRed = (x + y) % 2 === 0;
-                context.fillStyle = isRed ? '#ff0000' : '#0000ff';
+                const isEven = (x + y) % 2 === 0;
+                context.fillStyle = isEven ? checkColor1 : checkColor2;
                 context.fillRect(x * checkSize, y * checkSize, checkSize, checkSize);
             }
         }
