@@ -466,9 +466,9 @@
     const yLabelDistance = 7;
     const zLabelDistance = 8;
 
-    const xAxisColor = '#ff0000';
-    const yAxisColor = '#00ff00';
-    const zAxisColor = '#0000ff';
+    const xAxisColor = '#cc0055';
+    const yAxisColor = '#00cc66';
+    const zAxisColor = '#0055cc';
     // axis labels
     const xLabel = createTextLabel(xLabelUser, xAxisColor, new THREE.Vector3(xLabelDistance, 0, 0));
     const yLabel = createTextLabel( yLabelUser , yAxisColor, new THREE.Vector3(0, yLabelDistance, 0));
@@ -479,24 +479,25 @@
     scene.add(zLabel);
 
     const arrowPos = new THREE.Vector3(0, 0, 0);
+    const arrowGap = 0.5;
     const xArrow = new THREE.ArrowHelper(
         new THREE.Vector3(1, 0, 0), // Direction
         arrowPos,                   // Origin
-        xLabelDistance-0.5,             // Length
+        xLabelDistance-arrowGap ,             // Length
         xAxisColor                    // Color
     );
 
     const yArrow = new THREE.ArrowHelper(
         new THREE.Vector3(0, 1, 0), // Direction
         arrowPos,                   // Origin
-        yLabelDistance-0.5,             // Length
+        yLabelDistance-arrowGap ,             // Length
         yAxisColor                  // Color
     );
 
     const zArrow = new THREE.ArrowHelper(
         new THREE.Vector3(0, 0, 1), // Direction
         arrowPos,                   // Origin
-        zLabelDistance-0.5,             // Length
+        zLabelDistance-arrowGap,             // Length
         zAxisColor                  // Color
     );
     scene.add(xArrow);
