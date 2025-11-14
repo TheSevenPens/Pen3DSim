@@ -65,6 +65,13 @@
         </label>
     </div>
 
+    <div class="control-group">
+        <label style="display: flex; align-items: center; gap: 8px;">
+            <input type="checkbox" id="azimuth-annotations" checked style="width: auto; margin: 0;">
+            <span>Show tilt azimuth annotations</span>
+        </label>
+    </div>
+
     <button id="export-btn">Export as PNG</button>
 </div>
 <div id="viewer">
@@ -506,20 +513,23 @@
                 penTipLineGeometry.attributes.position.needsUpdate = true;
                 penTipLine.computeLineDistances();
                 
-                // Update surface line from tip projection to top projection, extended by 1 inch
+                // Update surface line from tip projection with fixed length (1 inch beyond arc)
+                // Arc radius is 2 inches, so line extends to 3 inches total
+                const fixedLineLength = arcRadius + 1.0; // 3 inches total
+                
                 const dx = penLineBottom.x - penTipLineBottom.x;
                 const dz = penLineBottom.z - penTipLineBottom.z;
                 const length = Math.sqrt(dx * dx + dz * dz);
                 
-                let extendedEndX = penLineBottom.x;
-                let extendedEndZ = penLineBottom.z;
+                let extendedEndX = penTipLineBottom.x;
+                let extendedEndZ = penTipLineBottom.z;
                 
                 if (length > 0.001) {
-                    // Normalize direction and extend by 1 inch
+                    // Normalize direction and extend to fixed length from tip projection
                     const dirX = dx / length;
                     const dirZ = dz / length;
-                    extendedEndX = penLineBottom.x + dirX * 1.0; // 1 inch extension
-                    extendedEndZ = penLineBottom.z + dirZ * 1.0;
+                    extendedEndX = penTipLineBottom.x + dirX * fixedLineLength;
+                    extendedEndZ = penTipLineBottom.z + dirZ * fixedLineLength;
                 }
                 
                 const surfaceLinePoints = [
@@ -765,6 +775,15 @@
         // Update controls to use new camera
         controls.object = camera;
         controls.update();
+    });
+    
+    // Tilt azimuth annotations visibility checkbox
+    const azimuthAnnotationsCheckbox = document.getElementById('azimuth-annotations');
+    azimuthAnnotationsCheckbox.addEventListener('change', (e) => {
+        const isVisible = e.target.checked;
+        arcAnnotationGroup.visible = isVisible;
+        surfaceLine.visible = isVisible;
+        surfaceArrowLine.visible = isVisible;
     });
 
     // Export as PNG
