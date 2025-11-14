@@ -43,35 +43,35 @@
     <div class="control-group">
         <label style="display: flex; align-items: center; gap: 8px;">
             <input type="checkbox" id="axonometric-view" style="width: auto; margin: 0;">
-            <span>Axonometric view</span>
+            <span>Axonometric</span>
         </label>
     </div>
 
     <div class="control-group">
         <label style="display: flex; align-items: center; gap: 8px;">
             <input type="checkbox" id="azimuth-annotations" checked style="width: auto; margin: 0;">
-            <span>Show tilt azimuth annotations</span>
+            <span>Tilt azimuth</span>
         </label>
     </div>
 
     <div class="control-group">
         <label style="display: flex; align-items: center; gap: 8px;">
             <input type="checkbox" id="altitude-annotations" checked style="width: auto; margin: 0;">
-            <span>Show tilt altitude annotations</span>
+            <span>Tilt altitude</span>
         </label>
     </div>
 
     <div class="control-group">
         <label style="display: flex; align-items: center; gap: 8px;">
             <input type="checkbox" id="barrel-annotations" checked style="width: auto; margin: 0;">
-            <span>Show barrel rotation annotations</span>
+            <span>Barrel rotation</span>
         </label>
     </div>
 
     <div class="control-group">
         <label style="display: flex; align-items: center; gap: 8px;">
             <input type="checkbox" id="axis-markers" checked style="width: auto; margin: 0;">
-            <span>Show axis markers</span>
+            <span>Axis</span>
         </label>
     </div>
 
@@ -1020,6 +1020,18 @@
     const yLabelUser = 'Z';
     const zLabelUser = 'Y';
 
+    // Position arrows just beyond the top left corner of the tablet
+    // Tablet is 16" × 9", centered at origin, so top left is at (-8, 0.05, 4.5)
+    // Position arrows on the other side (front/bottom) along the Z axis
+    // Note: tabletWidth and tabletDepth are already defined above
+    const tabletTopY = 0.05; // top surface Y coordinate
+    const arrowOffset = 0.5; // inches beyond the corner
+    const arrowPos = new THREE.Vector3(
+        -tabletWidth / 2 - arrowOffset,  // Just to the left of left edge
+        tabletTopY,                      // On tablet surface
+        -tabletDepth / 2 - arrowOffset   // Just beyond the bottom/front edge (opposite side)
+    );
+
     const xLabelDistance = 12;
     const yLabelDistance = 7;
     const zLabelDistance = 8;
@@ -1027,16 +1039,14 @@
     const xAxisColor = '#cc0055';
     const yAxisColor = '#00cc66';
     const zAxisColor = '#0055cc';
-    // axis labels
-    const xLabel = createTextLabel(xLabelUser, xAxisColor, new THREE.Vector3(xLabelDistance, 0, 0));
-    const yLabel = createTextLabel( yLabelUser , yAxisColor, new THREE.Vector3(0, yLabelDistance, 0));
-    const zLabel = createTextLabel(zLabelUser, zAxisColor , new THREE.Vector3(0, 0, zLabelDistance));
+    // axis labels - positioned at the end of each arrow from the new origin
+    const xLabel = createTextLabel(xLabelUser, xAxisColor, arrowPos.clone().add(new THREE.Vector3(xLabelDistance, 0, 0)));
+    const yLabel = createTextLabel( yLabelUser , yAxisColor, arrowPos.clone().add(new THREE.Vector3(0, yLabelDistance, 0)));
+    const zLabel = createTextLabel(zLabelUser, zAxisColor , arrowPos.clone().add(new THREE.Vector3(0, 0, zLabelDistance)));
 
     scene.add(xLabel);
     scene.add(yLabel);
     scene.add(zLabel);
-
-    const arrowPos = new THREE.Vector3(0, 0, 0);
     const arrowGap = 0.5;
     const xArrow = new THREE.ArrowHelper(
         new THREE.Vector3(1, 0, 0), // Direction
