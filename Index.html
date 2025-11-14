@@ -61,6 +61,13 @@
         </label>
     </div>
 
+    <div class="control-group">
+        <label style="display: flex; align-items: center; gap: 8px;">
+            <input type="checkbox" id="barrel-annotations" checked style="width: auto; margin: 0;">
+            <span>Show barrel rotation annotations</span>
+        </label>
+    </div>
+
     <button id="export-btn">Export as PNG</button>
 </div>
 <div id="viewer">
@@ -578,6 +585,7 @@
         let tabletOffsetX = 0; // inches
         let tabletOffsetZ = 0; // inches
         let showAltitudeAnnotations = true; // checkbox state
+        let showBarrelAnnotations = true; // checkbox state
 
         // Calculate pen position and rotation based on distance and tilt using quaternions
         function updatePenTransform(distance, altitude, azimuth, barrel) {
@@ -803,51 +811,62 @@
                 const barrelArcLength = Math.abs(barrel);
                 const barrelArcSegments = Math.max(8, Math.floor(barrelArcLength / 5));
                 
-                // Only show barrel arc if rotation is significant
-                if (barrelArcLength > 0.1) {
-                    const barrelArcPoints = createBarrelArcPoints(barrelCenter, penAxis, u, v, barrelArcRadius, barrelStartAngle, barrelEndAngle, barrelArcSegments);
-                    barrelArcGeometry.setFromPoints(barrelArcPoints);
-                    barrelArcGeometry.attributes.position.needsUpdate = true;
-                    barrelArcLine.visible = true;
+                // Only show barrel annotations if checkbox is checked
+                if (showBarrelAnnotations) {
+                    // Only show barrel arc if rotation is significant
+                    if (barrelArcLength > 0.1) {
+                        const barrelArcPoints = createBarrelArcPoints(barrelCenter, penAxis, u, v, barrelArcRadius, barrelStartAngle, barrelEndAngle, barrelArcSegments);
+                        barrelArcGeometry.setFromPoints(barrelArcPoints);
+                        barrelArcGeometry.attributes.position.needsUpdate = true;
+                        barrelArcLine.visible = true;
+                        
+                        // Update arrow at end of barrel arc
+                        const barrelArrowPoints = createBarrelArrow(barrelCenter, penAxis, u, v, barrelArcRadius, barrelEndAngle);
+                        barrelArrowGeometry.setFromPoints(barrelArrowPoints);
+                        barrelArrowGeometry.attributes.position.needsUpdate = true;
+                        barrelArrowLine.visible = true;
+                    } else {
+                        barrelArrowLine.visible = false;
+                        barrelArcLine.visible = false;
+                    }
                     
-                    // Update arrow at end of barrel arc
-                    const barrelArrowPoints = createBarrelArrow(barrelCenter, penAxis, u, v, barrelArcRadius, barrelEndAngle);
-                    barrelArrowGeometry.setFromPoints(barrelArrowPoints);
-                    barrelArrowGeometry.attributes.position.needsUpdate = true;
-                    barrelArrowLine.visible = true;
+                    // Create dotted circle (full 360°) in the plane perpendicular to pen axis
+                    const barrelDottedCircleSegments = 64; // Enough segments for a smooth circle
+                    const barrelDottedCirclePoints = createBarrelArcPoints(barrelCenter, penAxis, u, v, barrelArcRadius, 0, 2 * Math.PI, barrelDottedCircleSegments);
+                    barrelDottedCircleGeometry.setFromPoints(barrelDottedCirclePoints);
+                    barrelDottedCircleGeometry.attributes.position.needsUpdate = true;
+                    barrelDottedCircleLine.computeLineDistances(); // Required for dashed lines
+                    barrelDottedCircleLine.visible = true;
+                    
+                    // Update barrel surface line (fixed length 1.5 inches from center in the perpendicular plane)
+                    const barrelFixedLineLength = 1.5; // inches
+                    const barrelDir = u.clone().multiplyScalar(Math.cos(barrelEndAngle)).add(v.clone().multiplyScalar(Math.sin(barrelEndAngle)));
+                    barrelDir.normalize();
+                    const barrelDirection = barrelDir.multiplyScalar(barrelFixedLineLength);
+                    
+                    const barrelSurfaceLinePoints = [
+                        barrelCenter.clone(),
+                        barrelCenter.clone().add(barrelDirection)
+                    ];
+                    barrelSurfaceLineGeometry.setFromPoints(barrelSurfaceLinePoints);
+                    barrelSurfaceLineGeometry.attributes.position.needsUpdate = true;
+                    barrelSurfaceLine.visible = true;
+                    
+                    // Update arrow at end of barrel surface line
+                    const barrelSurfaceArrowPoints = createBarrelSurfaceArrow(barrelCenter, barrelDirection, penAxis);
+                    if (barrelSurfaceArrowPoints.length > 0) {
+                        barrelSurfaceArrowGeometry.setFromPoints(barrelSurfaceArrowPoints);
+                        barrelSurfaceArrowGeometry.attributes.position.needsUpdate = true;
+                        barrelSurfaceArrowLine.visible = true;
+                    } else {
+                        barrelSurfaceArrowLine.visible = false;
+                    }
                 } else {
-                    barrelArrowLine.visible = false;
+                    // Hide all barrel annotations
                     barrelArcLine.visible = false;
-                }
-                
-                // Create dotted circle (full 360°) in the plane perpendicular to pen axis
-                const barrelDottedCircleSegments = 64; // Enough segments for a smooth circle
-                const barrelDottedCirclePoints = createBarrelArcPoints(barrelCenter, penAxis, u, v, barrelArcRadius, 0, 2 * Math.PI, barrelDottedCircleSegments);
-                barrelDottedCircleGeometry.setFromPoints(barrelDottedCirclePoints);
-                barrelDottedCircleGeometry.attributes.position.needsUpdate = true;
-                barrelDottedCircleLine.computeLineDistances(); // Required for dashed lines
-                barrelDottedCircleLine.visible = true;
-                
-                // Update barrel surface line (fixed length 1.5 inches from center in the perpendicular plane)
-                const barrelFixedLineLength = 1.5; // inches
-                const barrelDir = u.clone().multiplyScalar(Math.cos(barrelEndAngle)).add(v.clone().multiplyScalar(Math.sin(barrelEndAngle)));
-                barrelDir.normalize();
-                const barrelDirection = barrelDir.multiplyScalar(barrelFixedLineLength);
-                
-                const barrelSurfaceLinePoints = [
-                    barrelCenter.clone(),
-                    barrelCenter.clone().add(barrelDirection)
-                ];
-                barrelSurfaceLineGeometry.setFromPoints(barrelSurfaceLinePoints);
-                barrelSurfaceLineGeometry.attributes.position.needsUpdate = true;
-                
-                // Update arrow at end of barrel surface line
-                const barrelSurfaceArrowPoints = createBarrelSurfaceArrow(barrelCenter, barrelDirection, penAxis);
-                if (barrelSurfaceArrowPoints.length > 0) {
-                    barrelSurfaceArrowGeometry.setFromPoints(barrelSurfaceArrowPoints);
-                    barrelSurfaceArrowGeometry.attributes.position.needsUpdate = true;
-                    barrelSurfaceArrowLine.visible = true;
-                } else {
+                    barrelArrowLine.visible = false;
+                    barrelDottedCircleLine.visible = false;
+                    barrelSurfaceLine.visible = false;
                     barrelSurfaceArrowLine.visible = false;
                 }
             }
@@ -1079,6 +1098,15 @@
     const altitudeAnnotationsCheckbox = document.getElementById('altitude-annotations');
     altitudeAnnotationsCheckbox.addEventListener('change', (e) => {
         showAltitudeAnnotations = e.target.checked;
+        // Update visibility immediately and trigger a pen transform update
+        const distance = parseFloat(penDistanceSlider.value);
+        updatePenTransform(distance, tiltAltitude, tiltAzimuth, barrelRotation);
+    });
+    
+    // Barrel rotation annotations visibility checkbox
+    const barrelAnnotationsCheckbox = document.getElementById('barrel-annotations');
+    barrelAnnotationsCheckbox.addEventListener('change', (e) => {
+        showBarrelAnnotations = e.target.checked;
         // Update visibility immediately and trigger a pen transform update
         const distance = parseFloat(penDistanceSlider.value);
         updatePenTransform(distance, tiltAltitude, tiltAzimuth, barrelRotation);
