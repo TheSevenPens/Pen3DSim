@@ -58,6 +58,13 @@
         </div>
     </div>
 
+    <div class="control-group">
+        <label style="display: flex; align-items: center; gap: 8px;">
+            <input type="checkbox" id="axonometric-view" style="width: auto; margin: 0;">
+            <span>Axonometric view</span>
+        </label>
+    </div>
+
     <button id="export-btn">Export as PNG</button>
 </div>
 <div id="viewer">
@@ -77,19 +84,36 @@
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x1a1a1a);
 
-    // Camera
-    const cameraFOV = 30;
+    // Cameras
     const cameraAspectRatio = viewer.clientWidth / viewer.clientHeight;
     const cameraNear = 0.1;
     const cameraFar = 1000;
-    const camera = new THREE.PerspectiveCamera(
-        cameraFOV,
+    
+    // Perspective camera
+    const perspectiveCamera = new THREE.PerspectiveCamera(
+        30,
         cameraAspectRatio,
         cameraNear,
         cameraFar
     );
-    camera.position.set(0, 15, 25);
-    camera.lookAt(0, 0, 0);
+    perspectiveCamera.position.set(0, 15, 25);
+    perspectiveCamera.lookAt(0, 0, 0);
+    
+    // Orthographic camera (axonometric)
+    const orthoSize = 20;
+    const orthographicCamera = new THREE.OrthographicCamera(
+        -orthoSize * cameraAspectRatio,
+        orthoSize * cameraAspectRatio,
+        orthoSize,
+        -orthoSize,
+        cameraNear,
+        cameraFar
+    );
+    orthographicCamera.position.set(0, 15, 25);
+    orthographicCamera.lookAt(0, 0, 0);
+    
+    // Active camera (starts with perspective)
+    let camera = perspectiveCamera;
 
     // Renderer
     const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
@@ -527,9 +551,42 @@
 
     // Handle window resize
     window.addEventListener('resize', () => {
-        camera.aspect = viewer.clientWidth / viewer.clientHeight;
-        camera.updateProjectionMatrix();
+        const aspect = viewer.clientWidth / viewer.clientHeight;
+        
+        // Update perspective camera
+        perspectiveCamera.aspect = aspect;
+        perspectiveCamera.updateProjectionMatrix();
+        
+        // Update orthographic camera
+        orthographicCamera.left = -orthoSize * aspect;
+        orthographicCamera.right = orthoSize * aspect;
+        orthographicCamera.updateProjectionMatrix();
+        
         renderer.setSize(viewer.clientWidth, viewer.clientHeight);
+    });
+    
+    // Axonometric view checkbox
+    const axonometricCheckbox = document.getElementById('axonometric-view');
+    axonometricCheckbox.addEventListener('change', (e) => {
+        const isAxonometric = e.target.checked;
+        
+        if (isAxonometric) {
+            // Switch to orthographic
+            // Copy position and rotation from perspective camera
+            orthographicCamera.position.copy(perspectiveCamera.position);
+            orthographicCamera.rotation.copy(perspectiveCamera.rotation);
+            camera = orthographicCamera;
+        } else {
+            // Switch to perspective
+            // Copy position and rotation from orthographic camera
+            perspectiveCamera.position.copy(orthographicCamera.position);
+            perspectiveCamera.rotation.copy(orthographicCamera.rotation);
+            camera = perspectiveCamera;
+        }
+        
+        // Update controls to use new camera
+        controls.object = camera;
+        controls.update();
     });
 
     // Export as PNG
