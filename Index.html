@@ -417,6 +417,107 @@
         return arrowPoints;
     }
 
+    // Barrel rotation annotations (centered on top of pen)
+    const barrelAnnotationGroup = new THREE.Group();
+    const barrelArcRadius = 1.5; // inches
+    const barrelAnnotationMaterial = new THREE.LineBasicMaterial({ color: 0xff8800, linewidth: 2 });
+    
+    // Create arc points in plane perpendicular to pen axis
+    function createBarrelArcPoints(center, axis, u, v, radius, startAngle, endAngle, segments) {
+        const points = [];
+        for (let i = 0; i <= segments; i++) {
+            const angle = startAngle + (endAngle - startAngle) * (i / segments);
+            const cosA = Math.cos(angle);
+            const sinA = Math.sin(angle);
+            // Point in the perpendicular plane
+            const point = center.clone().add(
+                u.clone().multiplyScalar(radius * cosA)
+            ).add(
+                v.clone().multiplyScalar(radius * sinA)
+            );
+            points.push(point);
+        }
+        return points;
+    }
+    
+    // Create arrow in plane perpendicular to pen axis
+    function createBarrelArrow(center, axis, u, v, radius, angle) {
+        const arrowHeadLength = 0.3;
+        const arrowWidth = 0.15;
+        
+        const cosA = Math.cos(angle);
+        const sinA = Math.sin(angle);
+        const endPoint = center.clone().add(
+            u.clone().multiplyScalar(radius * cosA)
+        ).add(
+            v.clone().multiplyScalar(radius * sinA)
+        );
+        
+        // Tangent direction in the plane (reversed to point opposite direction)
+        const tangent = u.clone().multiplyScalar(sinA).add(v.clone().multiplyScalar(-cosA));
+        tangent.normalize();
+        
+        // Perpendicular direction in the plane for arrow head width
+        const perp = u.clone().multiplyScalar(cosA).add(v.clone().multiplyScalar(sinA));
+        perp.normalize();
+        
+        // Arrow points: tip at end of arc, then two points forming the arrow head
+        const arrowPoints = [
+            endPoint.clone(), // Tip
+            endPoint.clone().add(tangent.clone().multiplyScalar(-arrowHeadLength)).add(perp.clone().multiplyScalar(-arrowWidth)),
+            endPoint.clone().add(tangent.clone().multiplyScalar(-arrowHeadLength)).add(perp.clone().multiplyScalar(arrowWidth)),
+            endPoint.clone() // Back to tip
+        ];
+        
+        return arrowPoints;
+    }
+    
+    // Create line arrow in plane perpendicular to pen axis
+    function createBarrelSurfaceArrow(center, direction, axis) {
+        const arrowHeadLength = 0.3;
+        const arrowWidth = 0.15;
+        
+        const length = direction.length();
+        if (length < 0.001) {
+            return []; // Too short, no arrow
+        }
+        
+        const endPoint = center.clone().add(direction);
+        const dir = direction.clone().normalize();
+        
+        // Perpendicular direction in the plane (perpendicular to both dir and axis)
+        const perp = new THREE.Vector3().crossVectors(dir, axis).normalize();
+        
+        // Arrow points: tip at end, then two points forming the arrow head
+        const arrowPoints = [
+            endPoint.clone(), // Tip
+            endPoint.clone().add(dir.clone().multiplyScalar(-arrowHeadLength)).add(perp.clone().multiplyScalar(-arrowWidth)),
+            endPoint.clone().add(dir.clone().multiplyScalar(-arrowHeadLength)).add(perp.clone().multiplyScalar(arrowWidth)),
+            endPoint.clone() // Back to tip
+        ];
+        
+        return arrowPoints;
+    }
+    
+    const barrelArcGeometry = new THREE.BufferGeometry();
+    const barrelArcLine = new THREE.Line(barrelArcGeometry, barrelAnnotationMaterial);
+    barrelAnnotationGroup.add(barrelArcLine);
+    
+    const barrelArrowGeometry = new THREE.BufferGeometry();
+    const barrelArrowLine = new THREE.Line(barrelArrowGeometry, barrelAnnotationMaterial);
+    barrelAnnotationGroup.add(barrelArrowLine);
+    
+    // Line from center extending in barrel rotation direction
+    const barrelSurfaceLineGeometry = new THREE.BufferGeometry();
+    const barrelSurfaceLine = new THREE.Line(barrelSurfaceLineGeometry, barrelAnnotationMaterial);
+    barrelAnnotationGroup.add(barrelSurfaceLine);
+    
+    const barrelSurfaceArrowGeometry = new THREE.BufferGeometry();
+    const barrelSurfaceArrowLine = new THREE.Line(barrelSurfaceArrowGeometry, barrelAnnotationMaterial);
+    barrelAnnotationGroup.add(barrelSurfaceArrowLine);
+    
+    scene.add(barrelAnnotationGroup);
+
     const penTopLocal = new THREE.Vector3(0, 4, 0); // barrelHeight = 4
     const penTopWorld = new THREE.Vector3();
     const penLineBottom = new THREE.Vector3();
@@ -576,6 +677,70 @@
                 } else {
                     arrowLine.visible = false;
                     arcLine.visible = false;
+                }
+                
+                // Update barrel rotation annotations (centered on top of pen, perpendicular to pen axis)
+                const barrelCenter = penTopWorld.clone();
+                
+                // Get pen's long axis direction (Y axis in pen's local space, transformed to world)
+                const penAxis = new THREE.Vector3(0, 1, 0).applyQuaternion(quaternion).normalize();
+                
+                // Create quaternion for pen orientation without barrel rotation
+                // This gives us the orientation of the plane for barrel rotation annotations
+                // Order: azimuth * altitude (no barrel rotation)
+                const orientationQuat = new THREE.Quaternion();
+                orientationQuat.multiplyQuaternions(altitudeQuat, new THREE.Quaternion()); // identity quaternion (no barrel rotation)
+                orientationQuat.premultiply(azimuthQuat);
+                
+                // Transform pen's local X and Z axes using orientation quaternion (without barrel rotation)
+                // These give us the basis vectors for the plane perpendicular to pen axis
+                const u = new THREE.Vector3(1, 0, 0).applyQuaternion(orientationQuat).normalize();
+                const v = new THREE.Vector3(0, 0, 1).applyQuaternion(orientationQuat).normalize();
+                
+                // Barrel arc starts at 90° and extends by barrel rotation (reversed direction)
+                const barrelStartAngle = Math.PI / 2; // 90 degrees
+                const barrelEndAngle = Math.PI / 2 - (barrel * Math.PI) / 180; // Start at 90° and extend by barrel rotation (reversed)
+                const barrelArcLength = Math.abs(barrel);
+                const barrelArcSegments = Math.max(8, Math.floor(barrelArcLength / 5));
+                
+                // Only show barrel arc if rotation is significant
+                if (barrelArcLength > 0.1) {
+                    const barrelArcPoints = createBarrelArcPoints(barrelCenter, penAxis, u, v, barrelArcRadius, barrelStartAngle, barrelEndAngle, barrelArcSegments);
+                    barrelArcGeometry.setFromPoints(barrelArcPoints);
+                    barrelArcGeometry.attributes.position.needsUpdate = true;
+                    barrelArcLine.visible = true;
+                    
+                    // Update arrow at end of barrel arc
+                    const barrelArrowPoints = createBarrelArrow(barrelCenter, penAxis, u, v, barrelArcRadius, barrelEndAngle);
+                    barrelArrowGeometry.setFromPoints(barrelArrowPoints);
+                    barrelArrowGeometry.attributes.position.needsUpdate = true;
+                    barrelArrowLine.visible = true;
+                } else {
+                    barrelArrowLine.visible = false;
+                    barrelArcLine.visible = false;
+                }
+                
+                // Update barrel surface line (fixed length 1.5 inches from center in the perpendicular plane)
+                const barrelFixedLineLength = 1.5; // inches
+                const barrelDir = u.clone().multiplyScalar(Math.cos(barrelEndAngle)).add(v.clone().multiplyScalar(Math.sin(barrelEndAngle)));
+                barrelDir.normalize();
+                const barrelDirection = barrelDir.multiplyScalar(barrelFixedLineLength);
+                
+                const barrelSurfaceLinePoints = [
+                    barrelCenter.clone(),
+                    barrelCenter.clone().add(barrelDirection)
+                ];
+                barrelSurfaceLineGeometry.setFromPoints(barrelSurfaceLinePoints);
+                barrelSurfaceLineGeometry.attributes.position.needsUpdate = true;
+                
+                // Update arrow at end of barrel surface line
+                const barrelSurfaceArrowPoints = createBarrelSurfaceArrow(barrelCenter, barrelDirection, penAxis);
+                if (barrelSurfaceArrowPoints.length > 0) {
+                    barrelSurfaceArrowGeometry.setFromPoints(barrelSurfaceArrowPoints);
+                    barrelSurfaceArrowGeometry.attributes.position.needsUpdate = true;
+                    barrelSurfaceArrowLine.visible = true;
+                } else {
+                    barrelSurfaceArrowLine.visible = false;
                 }
             }
 
