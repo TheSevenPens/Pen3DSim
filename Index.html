@@ -68,6 +68,13 @@
         </label>
     </div>
 
+    <div class="control-group">
+        <label style="display: flex; align-items: center; gap: 8px;">
+            <input type="checkbox" id="axis-markers" checked style="width: auto; margin: 0;">
+            <span>Show axis markers</span>
+        </label>
+    </div>
+
     <button id="export-btn">Export as PNG</button>
 </div>
 <div id="viewer">
@@ -1114,6 +1121,18 @@
         // Update visibility immediately and trigger a pen transform update
         const distance = parseFloat(penDistanceSlider.value);
         updatePenTransform(distance, tiltAltitude, tiltAzimuth, barrelRotation);
+    });
+    
+    // Axis markers visibility checkbox
+    const axisMarkersCheckbox = document.getElementById('axis-markers');
+    axisMarkersCheckbox.addEventListener('change', (e) => {
+        const isVisible = e.target.checked;
+        xArrow.visible = isVisible;
+        yArrow.visible = isVisible;
+        zArrow.visible = isVisible;
+        xLabel.visible = isVisible;
+        yLabel.visible = isVisible;
+        zLabel.visible = isVisible;
     });
 
     // Export as PNG
