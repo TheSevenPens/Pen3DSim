@@ -549,6 +549,11 @@
     const fusciaArcLine = new THREE.Line(fusciaArcGeometry, fusciaArcMaterial);
     scene.add(fusciaArcLine);
     
+    // Fuscia vertical line from pen tip to beginning of arc
+    const fusciaVerticalLineGeometry = new THREE.BufferGeometry();
+    const fusciaVerticalLine = new THREE.Line(fusciaVerticalLineGeometry, fusciaArcMaterial);
+    scene.add(fusciaVerticalLine);
+    
     // Fuscia semicircle for tilt altitude annotation (dotted)
     const fusciaSemicircleMaterial = new THREE.LineDashedMaterial({ 
         color: 0xff00ff, 
@@ -695,6 +700,17 @@
                 
                 // Only show tilt altitude annotations if altitude is not zero and checkbox is checked
                 if (altitude !== 0 && showAltitudeAnnotations) {
+                    // Create vertical line from pen tip to beginning of arc (straight up vertically)
+                    // The beginning of the arc is at angle 0 (vertical up), which is arcRadius distance in the fusciaU direction
+                    const arcStartPoint = arcCenter.clone().add(fusciaU.clone().multiplyScalar(arcRadius));
+                    const fusciaVerticalLinePoints = [
+                        penTipWorld.clone(),
+                        arcStartPoint
+                    ];
+                    fusciaVerticalLineGeometry.setFromPoints(fusciaVerticalLinePoints);
+                    fusciaVerticalLineGeometry.attributes.position.needsUpdate = true;
+                    fusciaVerticalLine.visible = true;
+                    
                     // Create circular arc
                     const fusciaArcPoints = createCircularArcInPlane(arcCenter, fusciaU, fusciaV, arcRadius, fusciaStartAngle, fusciaEndAngle, 32);
                     fusciaArcGeometry.setFromPoints(fusciaArcPoints);
@@ -709,6 +725,7 @@
                     fusciaSemicircleLine.computeLineDistances(); // Required for dashed lines
                     fusciaSemicircleLine.visible = true;
                 } else {
+                    fusciaVerticalLine.visible = false;
                     fusciaArcLine.visible = false;
                     fusciaSemicircleLine.visible = false;
                 }
