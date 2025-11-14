@@ -546,6 +546,17 @@
     const fusciaArcLine = new THREE.Line(fusciaArcGeometry, fusciaArcMaterial);
     scene.add(fusciaArcLine);
     
+    // Fuscia semicircle for tilt altitude annotation (dotted)
+    const fusciaSemicircleMaterial = new THREE.LineDashedMaterial({ 
+        color: 0xff00ff, 
+        dashSize: 0.1, 
+        gapSize: 0.1,
+        linewidth: 2 
+    });
+    const fusciaSemicircleGeometry = new THREE.BufferGeometry();
+    const fusciaSemicircleLine = new THREE.Line(fusciaSemicircleGeometry, fusciaSemicircleMaterial);
+    scene.add(fusciaSemicircleLine);
+    
     // Helper function to create circular arc points in a plane
     function createCircularArcInPlane(center, u, v, radius, startAngle, endAngle, segments) {
         const points = [];
@@ -677,6 +688,15 @@
                 fusciaArcGeometry.setFromPoints(fusciaArcPoints);
                 fusciaArcGeometry.attributes.position.needsUpdate = true;
                 fusciaArcLine.visible = true;
+                
+                // Create fuscia semicircle (180 degrees) rotated clockwise by 180 degrees in its plane
+                const fusciaSemicircleStartAngle = fusciaStartAngle - Math.PI / 2; // Rotate clockwise by 180 degrees from previous position
+                const fusciaSemicircleEndAngle = fusciaSemicircleStartAngle + Math.PI; // 180 degrees from rotated start
+                const fusciaSemicirclePoints = createCircularArcInPlane(arcCenter, fusciaU, fusciaV, arcRadius, fusciaSemicircleStartAngle, fusciaSemicircleEndAngle, 32);
+                fusciaSemicircleGeometry.setFromPoints(fusciaSemicirclePoints);
+                fusciaSemicircleGeometry.attributes.position.needsUpdate = true;
+                fusciaSemicircleLine.computeLineDistances(); // Required for dashed lines
+                fusciaSemicircleLine.visible = true;
                 
                 penTipLinePositions[0] = penTipWorld.x;
                 penTipLinePositions[1] = penTipWorld.y;
