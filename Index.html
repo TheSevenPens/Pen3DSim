@@ -681,6 +681,11 @@
                 // Calculate angle of pen axis in the plane
                 const fusciaEndAngle = Math.atan2(penAxisDir.dot(fusciaV), penAxisDir.dot(fusciaU));
                 
+                // Calculate angle from pen tip to tablet surface point (where arc should start)
+                const tabletSurfaceVec = penTipLineBottom.clone().sub(penTipWorld);
+                // Find the angle of this vector in the plane coordinate system
+                const tabletSurfaceAngle = Math.atan2(tabletSurfaceVec.dot(fusciaV), tabletSurfaceVec.dot(fusciaU));
+                
                 // Only show tilt altitude annotations if altitude is not zero and checkbox is checked
                 if (altitude !== 0 && showAltitudeAnnotations) {
                     // Create circular arc
@@ -689,11 +694,10 @@
                     fusciaArcGeometry.attributes.position.needsUpdate = true;
                     fusciaArcLine.visible = true;
                     
-                    // Create fuscia semicircle (180 degrees) rotated clockwise by 180 degrees in its plane
-                    const fusciaSemicircleStartAngle = fusciaStartAngle - Math.PI / 2; // Rotate clockwise by 180 degrees from previous position
-                    const fusciaSemicircleEndAngle = fusciaSemicircleStartAngle + Math.PI; // 180 degrees from rotated start
-                    const fusciaSemicirclePoints = createCircularArcInPlane(arcCenter, fusciaU, fusciaV, arcRadius, fusciaSemicircleStartAngle, fusciaSemicircleEndAngle, 32);
-                    fusciaSemicircleGeometry.setFromPoints(fusciaSemicirclePoints);
+                    // Create dotted fuscia circle (full 360 degrees) that follows the path of the arc
+                    const fusciaCircleSegments = 64; // Enough segments for a smooth circle
+                    const fusciaCirclePoints = createCircularArcInPlane(arcCenter, fusciaU, fusciaV, arcRadius, 0, 2 * Math.PI, fusciaCircleSegments);
+                    fusciaSemicircleGeometry.setFromPoints(fusciaCirclePoints);
                     fusciaSemicircleGeometry.attributes.position.needsUpdate = true;
                     fusciaSemicircleLine.computeLineDistances(); // Required for dashed lines
                     fusciaSemicircleLine.visible = true;
