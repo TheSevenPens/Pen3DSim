@@ -304,7 +304,7 @@
 
     // Arc annotation on tablet surface
     const arcAnnotationGroup = new THREE.Group();
-    const arcRadius = 2; // inches
+    const arcRadius = 1.5; // inches
     const arcMaterial = new THREE.LineBasicMaterial({ color: 0x00ff00, linewidth: 2 });
     
     // Create arc curve
@@ -513,9 +513,8 @@
                 penTipLineGeometry.attributes.position.needsUpdate = true;
                 penTipLine.computeLineDistances();
                 
-                // Update surface line from tip projection with fixed length (1 inch beyond arc)
-                // Arc radius is 2 inches, so line extends to 3 inches total
-                const fixedLineLength = arcRadius + 1.0; // 3 inches total
+                // Update surface line from tip projection with fixed length
+                const fixedLineLength = 2.5; // 2.5 inches total
                 
                 const dx = penLineBottom.x - penTipLineBottom.x;
                 const dz = penLineBottom.z - penTipLineBottom.z;
@@ -562,8 +561,8 @@
                 const arcLength = Math.abs(azimuth);
                 const arcSegments = Math.max(8, Math.floor(arcLength / 5)); // More segments for larger arcs
                 
-                // Only show arc if azimuth is significant
-                if (arcLength > 0.1) {
+                // Only show arc if azimuth is significant AND altitude is not zero
+                if (arcLength > 0.1 && altitude !== 0) {
                     const arcPoints = createArcPoints(arcCenterX, arcCenterZ, arcRadius, startAngle, endAngle, arcSegments);
                     arcGeometry.setFromPoints(arcPoints);
                     arcGeometry.attributes.position.needsUpdate = true;
@@ -604,6 +603,30 @@
             updatePenTransform(distance, tiltAltitude, tiltAzimuth, barrelRotation);
         });
 
+    // Tilt azimuth slider
+    const tiltAzimuthSlider = document.getElementById('tilt-azimuth');
+    const azimuthValueDisplay = document.getElementById('azimuth-value');
+
+    // Function to update azimuth slider enabled state based on altitude
+    function updateAzimuthSliderState() {
+        if (tiltAltitude === 0) {
+            tiltAzimuthSlider.disabled = true;
+            tiltAzimuthSlider.style.opacity = '0.5';
+            tiltAzimuthSlider.style.cursor = 'not-allowed';
+        } else {
+            tiltAzimuthSlider.disabled = false;
+            tiltAzimuthSlider.style.opacity = '1';
+            tiltAzimuthSlider.style.cursor = 'pointer';
+        }
+    }
+
+    tiltAzimuthSlider.addEventListener('input', (e) => {
+        tiltAzimuth = parseFloat(e.target.value);
+        azimuthValueDisplay.textContent = tiltAzimuth.toFixed(0);
+        const distance = parseFloat(penDistanceSlider.value);
+        updatePenTransform(distance, tiltAltitude, tiltAzimuth, barrelRotation);
+    });
+
     // Tilt altitude slider
     const tiltAltitudeSlider = document.getElementById('tilt-altitude');
     const altitudeValueDisplay = document.getElementById('altitude-value');
@@ -612,19 +635,12 @@
         tiltAltitude = parseFloat(e.target.value);
         altitudeValueDisplay.textContent = tiltAltitude.toFixed(0);
         const distance = parseFloat(penDistanceSlider.value);
+        updateAzimuthSliderState(); // Update azimuth slider state when altitude changes
         updatePenTransform(distance, tiltAltitude, tiltAzimuth, barrelRotation);
     });
-
-    // Tilt azimuth slider
-    const tiltAzimuthSlider = document.getElementById('tilt-azimuth');
-    const azimuthValueDisplay = document.getElementById('azimuth-value');
-
-    tiltAzimuthSlider.addEventListener('input', (e) => {
-        tiltAzimuth = parseFloat(e.target.value);
-        azimuthValueDisplay.textContent = tiltAzimuth.toFixed(0);
-        const distance = parseFloat(penDistanceSlider.value);
-        updatePenTransform(distance, tiltAltitude, tiltAzimuth, barrelRotation);
-    });
+    
+    // Initialize azimuth slider state
+    updateAzimuthSliderState();
 
     // Tablet position sliders
     const tabletPositionXSlider = document.getElementById('tablet-position-x');
