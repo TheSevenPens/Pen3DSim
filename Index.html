@@ -527,6 +527,17 @@
     const barrelSurfaceArrowLine = new THREE.Line(barrelSurfaceArrowGeometry, barrelAnnotationMaterial);
     barrelAnnotationGroup.add(barrelSurfaceArrowLine);
     
+    // Dotted circle for barrel rotation annotations
+    const barrelDottedCircleMaterial = new THREE.LineDashedMaterial({ 
+        color: 0xff8800, 
+        dashSize: 0.1, 
+        gapSize: 0.1,
+        linewidth: 2 
+    });
+    const barrelDottedCircleGeometry = new THREE.BufferGeometry();
+    const barrelDottedCircleLine = new THREE.Line(barrelDottedCircleGeometry, barrelDottedCircleMaterial);
+    barrelAnnotationGroup.add(barrelDottedCircleLine);
+    
     scene.add(barrelAnnotationGroup);
 
     const penTopLocal = new THREE.Vector3(0, 4, 0); // barrelHeight = 4
@@ -673,8 +684,16 @@
                 const arcLength = Math.abs(azimuth);
                 const arcSegments = Math.max(8, Math.floor(arcLength / 5)); // More segments for larger arcs
                 
-                // Only show arc if azimuth is significant AND altitude is not zero
-                if (arcLength > 0.1 && altitude !== 0) {
+                // Show circle always (same visibility as surface line)
+                const dottedCircleSegments = 64; // Enough segments for a smooth circle
+                const dottedCirclePoints = createArcPoints(arcCenterX, arcCenterZ, arcRadius, 0, 2 * Math.PI, dottedCircleSegments);
+                dottedArcGeometry.setFromPoints(dottedCirclePoints);
+                dottedArcGeometry.attributes.position.needsUpdate = true;
+                dottedArcLine.computeLineDistances(); // Required for dashed lines
+                dottedArcLine.visible = true;
+                
+                // Show arc if azimuth is significant
+                if (arcLength > 0.1) {
                     const arcPoints = createArcPoints(arcCenterX, arcCenterZ, arcRadius, startAngle, endAngle, arcSegments);
                     arcGeometry.setFromPoints(arcPoints);
                     arcGeometry.attributes.position.needsUpdate = true;
@@ -685,18 +704,9 @@
                     arrowGeometry.setFromPoints(arrowPoints);
                     arrowGeometry.attributes.position.needsUpdate = true;
                     arrowLine.visible = true;
-                    
-                    // Create dotted circle (full 360°)
-                    const dottedCircleSegments = 64; // Enough segments for a smooth circle
-                    const dottedCirclePoints = createArcPoints(arcCenterX, arcCenterZ, arcRadius, 0, 2 * Math.PI, dottedCircleSegments);
-                    dottedArcGeometry.setFromPoints(dottedCirclePoints);
-                    dottedArcGeometry.attributes.position.needsUpdate = true;
-                    dottedArcLine.computeLineDistances(); // Required for dashed lines
-                    dottedArcLine.visible = true;
                 } else {
                     arrowLine.visible = false;
                     arcLine.visible = false;
-                    dottedArcLine.visible = false;
                 }
                 
                 // Update barrel rotation annotations (centered on top of pen, perpendicular to pen axis)
@@ -739,6 +749,14 @@
                     barrelArrowLine.visible = false;
                     barrelArcLine.visible = false;
                 }
+                
+                // Create dotted circle (full 360°) in the plane perpendicular to pen axis
+                const barrelDottedCircleSegments = 64; // Enough segments for a smooth circle
+                const barrelDottedCirclePoints = createBarrelArcPoints(barrelCenter, penAxis, u, v, barrelArcRadius, 0, 2 * Math.PI, barrelDottedCircleSegments);
+                barrelDottedCircleGeometry.setFromPoints(barrelDottedCirclePoints);
+                barrelDottedCircleGeometry.attributes.position.needsUpdate = true;
+                barrelDottedCircleLine.computeLineDistances(); // Required for dashed lines
+                barrelDottedCircleLine.visible = true;
                 
                 // Update barrel surface line (fixed length 1.5 inches from center in the perpendicular plane)
                 const barrelFixedLineLength = 1.5; // inches
