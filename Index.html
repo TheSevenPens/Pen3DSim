@@ -295,6 +295,121 @@
     const penTipLine = new THREE.Line(penTipLineGeometry, penLineMaterial);
     scene.add(penTipLine);
 
+    // Arc annotation on tablet surface
+    const arcAnnotationGroup = new THREE.Group();
+    const arcRadius = 2; // inches
+    const arcMaterial = new THREE.LineBasicMaterial({ color: 0x00ff00, linewidth: 2 });
+    
+    // Create arc curve
+    function createArcPoints(centerX, centerZ, radius, startAngle, endAngle, segments) {
+        const points = [];
+        for (let i = 0; i <= segments; i++) {
+            const angle = startAngle + (endAngle - startAngle) * (i / segments);
+            const x = centerX + radius * Math.cos(angle);
+            const z = centerZ + radius * Math.sin(angle);
+            points.push(new THREE.Vector3(x, yOffset, z));
+        }
+        return points;
+    }
+    
+    // Create arrow at end of arc
+    function createArrow(centerX, centerZ, radius, angle) {
+        const arrowHeadLength = 0.3;
+        const arrowWidth = 0.15;
+        
+        const endX = centerX + radius * Math.cos(angle);
+        const endZ = centerZ + radius * Math.sin(angle);
+        
+        // Arrow direction (tangent to arc at end point, pointing in direction arc is growing)
+        // Since arc direction is reversed, negate the tangent direction
+        const dirX = Math.sin(angle); // Negated from -Math.sin(angle)
+        const dirZ = -Math.cos(angle); // Negated from Math.cos(angle)
+        
+        // Perpendicular direction for arrow head width
+        const perpX = Math.cos(angle);
+        const perpZ = Math.sin(angle);
+        
+        // Arrow points: tip at end of arc, then two points forming the arrow head
+        const arrowPoints = [
+            new THREE.Vector3(endX, yOffset, endZ), // Tip
+            new THREE.Vector3(
+                endX - arrowHeadLength * dirX - arrowWidth * perpX,
+                yOffset,
+                endZ - arrowHeadLength * dirZ - arrowWidth * perpZ
+            ),
+            new THREE.Vector3(
+                endX - arrowHeadLength * dirX + arrowWidth * perpX,
+                yOffset,
+                endZ - arrowHeadLength * dirZ + arrowWidth * perpZ
+            ),
+            new THREE.Vector3(endX, yOffset, endZ) // Back to tip
+        ];
+        
+        return arrowPoints;
+    }
+    
+    const arcGeometry = new THREE.BufferGeometry();
+    const arcLine = new THREE.Line(arcGeometry, arcMaterial);
+    arcAnnotationGroup.add(arcLine);
+    
+    const arrowGeometry = new THREE.BufferGeometry();
+    const arrowLine = new THREE.Line(arrowGeometry, arcMaterial);
+    arcAnnotationGroup.add(arrowLine);
+    
+    scene.add(arcAnnotationGroup);
+
+    // Line on tablet surface from tip projection to top projection
+    const surfaceLineGeometry = new THREE.BufferGeometry();
+    const surfaceLineMaterial = new THREE.LineBasicMaterial({ color: 0x00ff00, linewidth: 2 });
+    const surfaceLine = new THREE.Line(surfaceLineGeometry, surfaceLineMaterial);
+    scene.add(surfaceLine);
+    
+    // Arrow at end of surface line
+    const surfaceArrowGeometry = new THREE.BufferGeometry();
+    const surfaceArrowLine = new THREE.Line(surfaceArrowGeometry, surfaceLineMaterial);
+    scene.add(surfaceArrowLine);
+    
+    // Helper function to create arrow on surface
+    function createSurfaceArrow(startX, startZ, endX, endZ) {
+        const arrowHeadLength = 0.3;
+        const arrowWidth = 0.15;
+        
+        // Direction vector from start to end
+        const dx = endX - startX;
+        const dz = endZ - startZ;
+        const length = Math.sqrt(dx * dx + dz * dz);
+        
+        if (length < 0.001) {
+            return []; // Too short, no arrow
+        }
+        
+        // Normalize direction
+        const dirX = dx / length;
+        const dirZ = dz / length;
+        
+        // Perpendicular direction for arrow head width
+        const perpX = -dirZ;
+        const perpZ = dirX;
+        
+        // Arrow points: tip at end, then two points forming the arrow head
+        const arrowPoints = [
+            new THREE.Vector3(endX, yOffset, endZ), // Tip
+            new THREE.Vector3(
+                endX - arrowHeadLength * dirX - arrowWidth * perpX,
+                yOffset,
+                endZ - arrowHeadLength * dirZ - arrowWidth * perpZ
+            ),
+            new THREE.Vector3(
+                endX - arrowHeadLength * dirX + arrowWidth * perpX,
+                yOffset,
+                endZ - arrowHeadLength * dirZ + arrowWidth * perpZ
+            ),
+            new THREE.Vector3(endX, yOffset, endZ) // Back to tip
+        ];
+        
+        return arrowPoints;
+    }
+
     const penTopLocal = new THREE.Vector3(0, 4, 0); // barrelHeight = 4
     const penTopWorld = new THREE.Vector3();
     const penLineBottom = new THREE.Vector3();
@@ -390,6 +505,69 @@
                 penLine.computeLineDistances();
                 penTipLineGeometry.attributes.position.needsUpdate = true;
                 penTipLine.computeLineDistances();
+                
+                // Update surface line from tip projection to top projection, extended by 1 inch
+                const dx = penLineBottom.x - penTipLineBottom.x;
+                const dz = penLineBottom.z - penTipLineBottom.z;
+                const length = Math.sqrt(dx * dx + dz * dz);
+                
+                let extendedEndX = penLineBottom.x;
+                let extendedEndZ = penLineBottom.z;
+                
+                if (length > 0.001) {
+                    // Normalize direction and extend by 1 inch
+                    const dirX = dx / length;
+                    const dirZ = dz / length;
+                    extendedEndX = penLineBottom.x + dirX * 1.0; // 1 inch extension
+                    extendedEndZ = penLineBottom.z + dirZ * 1.0;
+                }
+                
+                const surfaceLinePoints = [
+                    new THREE.Vector3(penTipLineBottom.x, yOffset, penTipLineBottom.z),
+                    new THREE.Vector3(extendedEndX, yOffset, extendedEndZ)
+                ];
+                surfaceLineGeometry.setFromPoints(surfaceLinePoints);
+                surfaceLineGeometry.attributes.position.needsUpdate = true;
+                
+                // Update arrow at end of surface line
+                const surfaceArrowPoints = createSurfaceArrow(
+                    penTipLineBottom.x, penTipLineBottom.z,
+                    extendedEndX, extendedEndZ
+                );
+                if (surfaceArrowPoints.length > 0) {
+                    surfaceArrowGeometry.setFromPoints(surfaceArrowPoints);
+                    surfaceArrowGeometry.attributes.position.needsUpdate = true;
+                    surfaceArrowLine.visible = true;
+                } else {
+                    surfaceArrowLine.visible = false;
+                }
+                
+                // Update arc annotation
+                const arcCenterX = penTipLineBottom.x;
+                const arcCenterZ = penTipLineBottom.z;
+                
+                // Arc starts at 90° (pointing in +Z direction) and extends by azimuth angle (reversed direction)
+                const startAngle = Math.PI / 2; // 90 degrees to the right
+                const endAngle = Math.PI / 2 - (azimuth * Math.PI) / 180; // Start at 90° and extend by azimuth (reversed)
+                const arcLength = Math.abs(azimuth);
+                const arcSegments = Math.max(8, Math.floor(arcLength / 5)); // More segments for larger arcs
+                
+                // Only show arc if azimuth is significant
+                if (arcLength > 0.1) {
+                    const arcPoints = createArcPoints(arcCenterX, arcCenterZ, arcRadius, startAngle, endAngle, arcSegments);
+                    arcGeometry.setFromPoints(arcPoints);
+                    arcGeometry.attributes.position.needsUpdate = true;
+                    arcLine.visible = true;
+                    
+                    // Update arrow at end of arc
+                    const arrowPoints = createArrow(arcCenterX, arcCenterZ, arcRadius, endAngle);
+                    arrowGeometry.setFromPoints(arrowPoints);
+                    arrowGeometry.attributes.position.needsUpdate = true;
+                    arrowLine.visible = true;
+                } else {
+                    arrowLine.visible = false;
+                    arcLine.visible = false;
+                }
             }
 
         // Initialize pen position
