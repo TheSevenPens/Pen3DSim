@@ -9,8 +9,18 @@
 <body>
 <div id="control-panel">
     <div class="control-group">
-        <label>Hover distance: <span class="slider-value"><span id="distance-value">0.1</span> in</span></label>
+        <label>Z: (Hover distance): <span class="slider-value"><span id="distance-value">0.1</span> in</span></label>
         <input type="range" id="pen-distance" min="0" max="1" step="0.1" value="0">
+    </div>
+
+    <div class="control-group">
+        <label>X: <span class="slider-value"><span id="tablet-position-x-value">0.0</span> in</span></label>
+        <input type="range" id="tablet-position-x" min="-8" max="8" step="0.1" value="0">
+    </div>
+
+    <div class="control-group">
+        <label>Y: <span class="slider-value"><span id="tablet-position-z-value">0.0</span> in</span></label>
+        <input type="range" id="tablet-position-z" min="-4.5" max="4.5" step="0.1" value="0">
     </div>
 
     <div class="control-group">
@@ -37,23 +47,6 @@
     </div>
 
     <div class="control-group">
-        <label>X: <span class="slider-value"><span id="tablet-position-x-value">0.0</span> in</span></label>
-        <input type="range" id="tablet-position-x" min="-8" max="8" step="0.1" value="0">
-    </div>
-
-    <div class="control-group">
-        <label>Y: <span class="slider-value"><span id="tablet-position-z-value">0.0</span> in</span></label>
-        <input type="range" id="tablet-position-z" min="-4.5" max="4.5" step="0.1" value="0">
-    </div>
-
-    <div class="control-group">
-        <label style="display: flex; align-items: center; gap: 8px;">
-            <input type="checkbox" id="axonometric-view" style="width: auto; margin: 0;">
-            <span>Axonometric</span>
-        </label>
-    </div>
-
-    <div class="control-group">
         <label style="display: flex; align-items: center; gap: 8px;">
             <input type="checkbox" id="azimuth-annotations" checked style="width: auto; margin: 0;">
             <span>Tilt azimuth</span>
@@ -64,13 +57,6 @@
         <label style="display: flex; align-items: center; gap: 8px;">
             <input type="checkbox" id="altitude-annotations" checked style="width: auto; margin: 0;">
             <span>Tilt altitude</span>
-        </label>
-    </div>
-
-    <div class="control-group">
-        <label style="display: flex; align-items: center; gap: 8px;">
-            <input type="checkbox" id="barrel-annotations" checked style="width: auto; margin: 0;">
-            <span>Barrel rotation</span>
         </label>
     </div>
 
@@ -90,10 +76,26 @@
 
     <div class="control-group">
         <label style="display: flex; align-items: center; gap: 8px;">
+            <input type="checkbox" id="barrel-annotations" checked style="width: auto; margin: 0;">
+            <span>Barrel rotation</span>
+        </label>
+    </div>
+
+
+    <div class="control-group">
+        <label style="display: flex; align-items: center; gap: 8px;">
             <input type="checkbox" id="axis-markers" checked style="width: auto; margin: 0;">
             <span>Axis</span>
         </label>
     </div>
+
+    <div class="control-group">
+        <label style="display: flex; align-items: center; gap: 8px;">
+            <input type="checkbox" id="axonometric-view" style="width: auto; margin: 0;">
+            <span>Axonometric</span>
+        </label>
+    </div>
+
 
     <button id="export-btn">Export as PNG</button>
 </div>
