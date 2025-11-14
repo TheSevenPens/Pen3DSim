@@ -234,6 +234,23 @@
     penGroup.position.set(0, 0, 0);
     scene.add(penGroup);
 
+    // Line from top of pen to tablet surface
+    const penLinePositions = new Float32Array(6);
+    const penLineGeometry = new THREE.BufferGeometry();
+    penLineGeometry.setAttribute('position', new THREE.BufferAttribute(penLinePositions, 3));
+
+    const penLineMaterial = new THREE.LineDashedMaterial({
+        color: 0x00ff00,
+        dashSize: 0.2,
+        gapSize: 0.1
+    });
+    const penLine = new THREE.Line(penLineGeometry, penLineMaterial);
+    scene.add(penLine);
+
+    const penTopLocal = new THREE.Vector3(0, barrelHeight, 0);
+    const penTopWorld = new THREE.Vector3();
+    const penLineBottom = new THREE.Vector3();
+
         // Pen tilt parameters
         let tiltAltitude = 30; // degrees
         let tiltAzimuth = 0; // degrees
@@ -291,6 +308,21 @@
                     tipContactY - tipOffsetWorld.y,
                     tipContactZ - tipOffsetWorld.z
                 );
+                penGroup.updateMatrixWorld(true);
+
+                penTopWorld.copy(penTopLocal).applyMatrix4(penGroup.matrixWorld);
+                penLineBottom.set(penTopWorld.x, tabletTopY, penTopWorld.z);
+
+                penLinePositions[0] = penTopWorld.x;
+                penLinePositions[1] = penTopWorld.y;
+                penLinePositions[2] = penTopWorld.z;
+
+                penLinePositions[3] = penLineBottom.x;
+                penLinePositions[4] = penLineBottom.y;
+                penLinePositions[5] = penLineBottom.z;
+
+                penLineGeometry.attributes.position.needsUpdate = true;
+                penLine.computeLineDistances();
             }
 
         // Initialize pen position
