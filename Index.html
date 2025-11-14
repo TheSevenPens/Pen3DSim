@@ -24,6 +24,14 @@
     </div>
 
     <div class="control-group">
+        <label>Tilt X: <span class="slider-value"><span id="tilt-x-value">0.0</span>°</span></label>
+    </div>
+
+    <div class="control-group">
+        <label>Tilt Y: <span class="slider-value"><span id="tilt-y-value">0.0</span>°</span></label>
+    </div>
+
+    <div class="control-group">
         <label>Barrel rotation: <span class="slider-value"><span id="barrel-rotation-value">0</span>°</span></label>
         <input type="range" id="barrel-rotation" min="0" max="359" step="1" value="0">
     </div>
@@ -63,6 +71,20 @@
         <label style="display: flex; align-items: center; gap: 8px;">
             <input type="checkbox" id="barrel-annotations" checked style="width: auto; margin: 0;">
             <span>Barrel rotation</span>
+        </label>
+    </div>
+
+    <div class="control-group">
+        <label style="display: flex; align-items: center; gap: 8px;">
+            <input type="checkbox" id="tilt-x-annotations" checked style="width: auto; margin: 0;">
+            <span>Tilt X</span>
+        </label>
+    </div>
+
+    <div class="control-group">
+        <label style="display: flex; align-items: center; gap: 8px;">
+            <input type="checkbox" id="tilt-y-annotations" checked style="width: auto; margin: 0;">
+            <span>Tilt Y</span>
         </label>
     </div>
 
@@ -589,6 +611,50 @@
     const fusciaSemicircleLine = new THREE.Line(fusciaSemicircleGeometry, fusciaSemicircleMaterial);
     scene.add(fusciaSemicircleLine);
     
+    // Tilt X annotation (light blue)
+    const tiltXArcThickness = 0.02; // Thickness of the tilt X arc tube in inches
+    const tiltXArcMaterial = new THREE.MeshBasicMaterial({ color: 0x88ccff }); // Light blue
+    const tiltXArcGeometry = new THREE.BufferGeometry();
+    const tiltXArcLine = new THREE.Mesh(tiltXArcGeometry, tiltXArcMaterial);
+    scene.add(tiltXArcLine);
+    
+    const tiltXVerticalLineMaterial = new THREE.LineBasicMaterial({ color: 0x88ccff, linewidth: 2 });
+    const tiltXVerticalLineGeometry = new THREE.BufferGeometry();
+    const tiltXVerticalLine = new THREE.Line(tiltXVerticalLineGeometry, tiltXVerticalLineMaterial);
+    scene.add(tiltXVerticalLine);
+    
+    const tiltXDottedCircleMaterial = new THREE.LineDashedMaterial({ 
+        color: 0x88ccff, 
+        dashSize: 0.1, 
+        gapSize: 0.1,
+        linewidth: 2 
+    });
+    const tiltXDottedCircleGeometry = new THREE.BufferGeometry();
+    const tiltXDottedCircleLine = new THREE.Line(tiltXDottedCircleGeometry, tiltXDottedCircleMaterial);
+    scene.add(tiltXDottedCircleLine);
+    
+    // Tilt Y annotation (pink)
+    const tiltYArcThickness = 0.02; // Thickness of the tilt Y arc tube in inches
+    const tiltYArcMaterial = new THREE.MeshBasicMaterial({ color: 0xff88cc }); // Pink
+    const tiltYArcGeometry = new THREE.BufferGeometry();
+    const tiltYArcLine = new THREE.Mesh(tiltYArcGeometry, tiltYArcMaterial);
+    scene.add(tiltYArcLine);
+    
+    const tiltYVerticalLineMaterial = new THREE.LineBasicMaterial({ color: 0xff88cc, linewidth: 2 });
+    const tiltYVerticalLineGeometry = new THREE.BufferGeometry();
+    const tiltYVerticalLine = new THREE.Line(tiltYVerticalLineGeometry, tiltYVerticalLineMaterial);
+    scene.add(tiltYVerticalLine);
+    
+    const tiltYDottedCircleMaterial = new THREE.LineDashedMaterial({ 
+        color: 0xff88cc, 
+        dashSize: 0.1, 
+        gapSize: 0.1,
+        linewidth: 2 
+    });
+    const tiltYDottedCircleGeometry = new THREE.BufferGeometry();
+    const tiltYDottedCircleLine = new THREE.Line(tiltYDottedCircleGeometry, tiltYDottedCircleMaterial);
+    scene.add(tiltYDottedCircleLine);
+    
     // Helper function to create circular arc points in a plane
     function createCircularArcInPlane(center, u, v, radius, startAngle, endAngle, segments) {
         const points = [];
@@ -622,6 +688,23 @@
         let tabletOffsetZ = 0; // inches
         let showAltitudeAnnotations = true; // checkbox state
         let showBarrelAnnotations = true; // checkbox state
+        let showTiltXAnnotations = true; // checkbox state
+        let showTiltYAnnotations = true; // checkbox state
+        
+        // Calculate tilt X and tilt Y from tilt altitude and azimuth
+        function calculateTiltX(altitude, azimuth) {
+            const altRad = (altitude * Math.PI) / 180;
+            const azRad = (azimuth * Math.PI) / 180;
+            const tiltXRad = Math.atan(Math.tan(altRad) * Math.sin(azRad));
+            return (tiltXRad * 180) / Math.PI;
+        }
+        
+        function calculateTiltY(altitude, azimuth) {
+            const altRad = (altitude * Math.PI) / 180;
+            const azRad = (azimuth * Math.PI) / 180;
+            const tiltYRad = Math.atan(Math.tan(altRad) * Math.cos(azRad));
+            return (tiltYRad * 180) / Math.PI;
+        }
 
         // Calculate pen position and rotation based on distance and tilt using quaternions
         function updatePenTransform(distance, altitude, azimuth, barrel) {
@@ -759,6 +842,100 @@
                     fusciaVerticalLine.visible = false;
                     fusciaArcLine.visible = false;
                     fusciaSemicircleLine.visible = false;
+                }
+                
+                // Calculate and update tilt X and tilt Y values
+                const tiltX = calculateTiltX(altitude, azimuth);
+                const tiltY = calculateTiltY(altitude, azimuth);
+                document.getElementById('tilt-x-value').textContent = tiltX.toFixed(1);
+                document.getElementById('tilt-y-value').textContent = tiltY.toFixed(1);
+                
+                // Update tilt X annotation (light blue) - in XZ plane
+                if (tiltX !== 0 && showTiltXAnnotations) {
+                    const tiltXArcCenter = penTipWorld.clone();
+                    const tiltXArcRadius = 2.0; // inches
+                    // Plane is XZ: u is vertical (Y up), v is horizontal (X direction)
+                    const tiltXU = new THREE.Vector3(0, 1, 0); // Vertical up
+                    const tiltXV = new THREE.Vector3(1, 0, 0); // X direction
+                    
+                    // Calculate angle: tilt X is the angle in the XZ plane
+                    const tiltXStartAngle = 0; // Vertical up
+                    const tiltXEndAngle = (tiltX * Math.PI) / 180; // Tilt X angle
+                    
+                    // Vertical line from pen tip to beginning of arc
+                    const tiltXArcStartPoint = tiltXArcCenter.clone().add(tiltXU.clone().multiplyScalar(tiltXArcRadius));
+                    const tiltXVerticalLinePoints = [
+                        penTipWorld.clone(),
+                        tiltXArcStartPoint
+                    ];
+                    tiltXVerticalLineGeometry.setFromPoints(tiltXVerticalLinePoints);
+                    tiltXVerticalLineGeometry.attributes.position.needsUpdate = true;
+                    tiltXVerticalLine.visible = true;
+                    
+                    // Create circular arc
+                    const tiltXArcPoints = createCircularArcInPlane(tiltXArcCenter, tiltXU, tiltXV, tiltXArcRadius, tiltXStartAngle, tiltXEndAngle, 32);
+                    const tiltXArcCurve = createCurveFromPoints(tiltXArcPoints);
+                    const tiltXTubeGeometry = new THREE.TubeGeometry(tiltXArcCurve, 32, tiltXArcThickness, 8, false);
+                    if (tiltXArcLine.geometry) {
+                        tiltXArcLine.geometry.dispose();
+                    }
+                    tiltXArcLine.geometry = tiltXTubeGeometry;
+                    tiltXArcLine.visible = true;
+                    
+                    // Create dotted circle
+                    const tiltXCirclePoints = createCircularArcInPlane(tiltXArcCenter, tiltXU, tiltXV, tiltXArcRadius, 0, 2 * Math.PI, 64);
+                    tiltXDottedCircleGeometry.setFromPoints(tiltXCirclePoints);
+                    tiltXDottedCircleGeometry.attributes.position.needsUpdate = true;
+                    tiltXDottedCircleLine.computeLineDistances();
+                    tiltXDottedCircleLine.visible = true;
+                } else {
+                    tiltXVerticalLine.visible = false;
+                    tiltXArcLine.visible = false;
+                    tiltXDottedCircleLine.visible = false;
+                }
+                
+                // Update tilt Y annotation (pink) - in YZ plane
+                if (tiltY !== 0 && showTiltYAnnotations) {
+                    const tiltYArcCenter = penTipWorld.clone();
+                    const tiltYArcRadius = 2.0; // inches
+                    // Plane is YZ: u is vertical (Y up), v is horizontal (Z direction)
+                    const tiltYU = new THREE.Vector3(0, 1, 0); // Vertical up
+                    const tiltYV = new THREE.Vector3(0, 0, 1); // Z direction
+                    
+                    // Calculate angle: tilt Y is the angle in the YZ plane
+                    const tiltYStartAngle = 0; // Vertical up
+                    const tiltYEndAngle = (tiltY * Math.PI) / 180; // Tilt Y angle
+                    
+                    // Vertical line from pen tip to beginning of arc
+                    const tiltYArcStartPoint = tiltYArcCenter.clone().add(tiltYU.clone().multiplyScalar(tiltYArcRadius));
+                    const tiltYVerticalLinePoints = [
+                        penTipWorld.clone(),
+                        tiltYArcStartPoint
+                    ];
+                    tiltYVerticalLineGeometry.setFromPoints(tiltYVerticalLinePoints);
+                    tiltYVerticalLineGeometry.attributes.position.needsUpdate = true;
+                    tiltYVerticalLine.visible = true;
+                    
+                    // Create circular arc
+                    const tiltYArcPoints = createCircularArcInPlane(tiltYArcCenter, tiltYU, tiltYV, tiltYArcRadius, tiltYStartAngle, tiltYEndAngle, 32);
+                    const tiltYArcCurve = createCurveFromPoints(tiltYArcPoints);
+                    const tiltYTubeGeometry = new THREE.TubeGeometry(tiltYArcCurve, 32, tiltYArcThickness, 8, false);
+                    if (tiltYArcLine.geometry) {
+                        tiltYArcLine.geometry.dispose();
+                    }
+                    tiltYArcLine.geometry = tiltYTubeGeometry;
+                    tiltYArcLine.visible = true;
+                    
+                    // Create dotted circle
+                    const tiltYCirclePoints = createCircularArcInPlane(tiltYArcCenter, tiltYU, tiltYV, tiltYArcRadius, 0, 2 * Math.PI, 64);
+                    tiltYDottedCircleGeometry.setFromPoints(tiltYCirclePoints);
+                    tiltYDottedCircleGeometry.attributes.position.needsUpdate = true;
+                    tiltYDottedCircleLine.computeLineDistances();
+                    tiltYDottedCircleLine.visible = true;
+                } else {
+                    tiltYVerticalLine.visible = false;
+                    tiltYArcLine.visible = false;
+                    tiltYDottedCircleLine.visible = false;
                 }
                 
                 penTipLinePositions[0] = penTipWorld.x;
@@ -1190,6 +1367,24 @@
     const barrelAnnotationsCheckbox = document.getElementById('barrel-annotations');
     barrelAnnotationsCheckbox.addEventListener('change', (e) => {
         showBarrelAnnotations = e.target.checked;
+        // Update visibility immediately and trigger a pen transform update
+        const distance = parseFloat(penDistanceSlider.value);
+        updatePenTransform(distance, tiltAltitude, tiltAzimuth, barrelRotation);
+    });
+    
+    // Tilt X annotations visibility checkbox
+    const tiltXAnnotationsCheckbox = document.getElementById('tilt-x-annotations');
+    tiltXAnnotationsCheckbox.addEventListener('change', (e) => {
+        showTiltXAnnotations = e.target.checked;
+        // Update visibility immediately and trigger a pen transform update
+        const distance = parseFloat(penDistanceSlider.value);
+        updatePenTransform(distance, tiltAltitude, tiltAzimuth, barrelRotation);
+    });
+    
+    // Tilt Y annotations visibility checkbox
+    const tiltYAnnotationsCheckbox = document.getElementById('tilt-y-annotations');
+    tiltYAnnotationsCheckbox.addEventListener('change', (e) => {
+        showTiltYAnnotations = e.target.checked;
         // Update visibility immediately and trigger a pen transform update
         const distance = parseFloat(penDistanceSlider.value);
         updatePenTransform(distance, tiltAltitude, tiltAzimuth, barrelRotation);
