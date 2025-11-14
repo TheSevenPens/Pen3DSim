@@ -76,14 +76,14 @@
 
     <div class="control-group">
         <label style="display: flex; align-items: center; gap: 8px;">
-            <input type="checkbox" id="tilt-x-annotations" checked style="width: auto; margin: 0;">
+            <input type="checkbox" id="tilt-x-annotations" style="width: auto; margin: 0;">
             <span>Tilt X</span>
         </label>
     </div>
 
     <div class="control-group">
         <label style="display: flex; align-items: center; gap: 8px;">
-            <input type="checkbox" id="tilt-y-annotations" checked style="width: auto; margin: 0;">
+            <input type="checkbox" id="tilt-y-annotations" style="width: auto; margin: 0;">
             <span>Tilt Y</span>
         </label>
     </div>
@@ -98,12 +98,6 @@
     <button id="export-btn">Export as PNG</button>
 </div>
 <div id="viewer">
-    <div id="info">
-        Tablet: 16" × 9" × 0.5"<br>
-        Left-click + drag to rotate<br>
-        Right-click + drag to pan<br>
-        Scroll to zoom
-    </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -688,8 +682,8 @@
         let tabletOffsetZ = 0; // inches
         let showAltitudeAnnotations = true; // checkbox state
         let showBarrelAnnotations = true; // checkbox state
-        let showTiltXAnnotations = true; // checkbox state
-        let showTiltYAnnotations = true; // checkbox state
+        let showTiltXAnnotations = false; // checkbox state (unchecked by default)
+        let showTiltYAnnotations = false; // checkbox state (unchecked by default)
         
         // Calculate tilt X and tilt Y from tilt altitude and azimuth
         function calculateTiltX(altitude, azimuth) {
