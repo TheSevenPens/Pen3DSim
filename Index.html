@@ -14,13 +14,13 @@
     </div>
 
     <div class="control-group">
-        <label>X: <span class="slider-value"><span id="tablet-position-x-value">0.0</span> in</span></label>
-        <input type="range" id="tablet-position-x" min="-8" max="8" step="0.1" value="0">
+        <label>X: <span class="slider-value"><span id="tablet-position-x-value">8.0</span> in</span></label>
+        <input type="range" id="tablet-position-x" min="0" max="16" step="0.1" value="8">
     </div>
 
     <div class="control-group">
-        <label>Y: <span class="slider-value"><span id="tablet-position-z-value">0.0</span> in</span></label>
-        <input type="range" id="tablet-position-z" min="-4.5" max="4.5" step="0.1" value="0">
+        <label>Y: <span class="slider-value"><span id="tablet-position-z-value">4.5</span> in</span></label>
+        <input type="range" id="tablet-position-z" min="0" max="9" step="0.1" value="4.5">
     </div>
 
     <div class="control-group">
@@ -680,8 +680,8 @@
         let tiltAltitude = 30; // degrees
         let tiltAzimuth = 0; // degrees
         let barrelRotation = 0; // degrees
-        let tabletOffsetX = 0; // inches
-        let tabletOffsetZ = 0; // inches
+        let tabletOffsetX = 8; // inches (0-16 range, centered at 8)
+        let tabletOffsetZ = 4.5; // inches (0-9 range, centered at 4.5)
         let showAltitudeAnnotations = true; // checkbox state
         let showBarrelAnnotations = true; // checkbox state
         let showTiltXAnnotations = false; // checkbox state (unchecked by default)
@@ -714,9 +714,10 @@
             const barrelRad = (barrel * Math.PI) / 180;
         
             // The tip contact point on the tablet (fixed in world space)
-            const tipContactX = THREE.MathUtils.clamp(tabletOffsetX, -tabletWidth / 2, tabletWidth / 2);
+            // Convert from 0-16/0-9 coordinate system to -8 to 8/-4.5 to 4.5 (centered at origin)
+            const tipContactX = THREE.MathUtils.clamp(tabletOffsetX - tabletWidth / 2, -tabletWidth / 2, tabletWidth / 2);
             const tipContactY = tabletTopY + distance;
-            const tipContactZ = THREE.MathUtils.clamp(tabletOffsetZ, -tabletDepth / 2, tabletDepth / 2);
+            const tipContactZ = THREE.MathUtils.clamp(tabletOffsetZ - tabletDepth / 2, -tabletDepth / 2, tabletDepth / 2);
         
                 // Create quaternions for each rotation
                 // Azimuth rotation (around world Y axis)
