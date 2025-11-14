@@ -308,7 +308,8 @@
     // Arc annotation on tablet surface
     const arcAnnotationGroup = new THREE.Group();
     const arcRadius = 1.5; // inches
-    const arcMaterial = new THREE.LineBasicMaterial({ color: 0x00ff00, linewidth: 2 });
+    const arcMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+    const arcThickness = 0.02; // Thickness of the arc tube in inches
     
     // Create arc curve
     function createArcPoints(centerX, centerZ, radius, startAngle, endAngle, segments) {
@@ -320,6 +321,12 @@
             points.push(new THREE.Vector3(x, yOffset, z));
         }
         return points;
+    }
+    
+    // Create curve from points for TubeGeometry
+    function createCurveFromPoints(points) {
+        const curve = new THREE.CatmullRomCurve3(points);
+        return curve;
     }
     
     // Create arrow at end of arc
@@ -358,12 +365,14 @@
         return arrowPoints;
     }
     
+    // Create arc as a tube (thick line) instead of a thin line
     const arcGeometry = new THREE.BufferGeometry();
-    const arcLine = new THREE.Line(arcGeometry, arcMaterial);
+    const arcLine = new THREE.Mesh(arcGeometry, arcMaterial);
     arcAnnotationGroup.add(arcLine);
     
+    const arrowMaterial = new THREE.LineBasicMaterial({ color: 0x00ff00, linewidth: 2 });
     const arrowGeometry = new THREE.BufferGeometry();
-    const arrowLine = new THREE.Line(arrowGeometry, arcMaterial);
+    const arrowLine = new THREE.Line(arrowGeometry, arrowMaterial);
     arcAnnotationGroup.add(arrowLine);
     
     // Dotted arc to complete the remaining part of the circle
@@ -434,7 +443,9 @@
     // Barrel rotation annotations (centered on top of pen)
     const barrelAnnotationGroup = new THREE.Group();
     const barrelArcRadius = 1.5; // inches
-    const barrelAnnotationMaterial = new THREE.LineBasicMaterial({ color: 0xff8800, linewidth: 2 });
+    const barrelArcThickness = 0.02; // Thickness of the barrel arc tube in inches
+    const barrelAnnotationMaterial = new THREE.MeshBasicMaterial({ color: 0xff8800 });
+    const barrelArrowMaterial = new THREE.LineBasicMaterial({ color: 0xff8800, linewidth: 2 });
     
     // Create arc points in plane perpendicular to pen axis
     function createBarrelArcPoints(center, axis, u, v, radius, startAngle, endAngle, segments) {
@@ -513,21 +524,22 @@
         return arrowPoints;
     }
     
+    // Create barrel arc as a tube (thick line) instead of a thin line
     const barrelArcGeometry = new THREE.BufferGeometry();
-    const barrelArcLine = new THREE.Line(barrelArcGeometry, barrelAnnotationMaterial);
+    const barrelArcLine = new THREE.Mesh(barrelArcGeometry, barrelAnnotationMaterial);
     barrelAnnotationGroup.add(barrelArcLine);
     
     const barrelArrowGeometry = new THREE.BufferGeometry();
-    const barrelArrowLine = new THREE.Line(barrelArrowGeometry, barrelAnnotationMaterial);
+    const barrelArrowLine = new THREE.Line(barrelArrowGeometry, barrelArrowMaterial);
     barrelAnnotationGroup.add(barrelArrowLine);
     
     // Line from center extending in barrel rotation direction
     const barrelSurfaceLineGeometry = new THREE.BufferGeometry();
-    const barrelSurfaceLine = new THREE.Line(barrelSurfaceLineGeometry, barrelAnnotationMaterial);
+    const barrelSurfaceLine = new THREE.Line(barrelSurfaceLineGeometry, barrelArrowMaterial);
     barrelAnnotationGroup.add(barrelSurfaceLine);
     
     const barrelSurfaceArrowGeometry = new THREE.BufferGeometry();
-    const barrelSurfaceArrowLine = new THREE.Line(barrelSurfaceArrowGeometry, barrelAnnotationMaterial);
+    const barrelSurfaceArrowLine = new THREE.Line(barrelSurfaceArrowGeometry, barrelArrowMaterial);
     barrelAnnotationGroup.add(barrelSurfaceArrowLine);
     
     // Dotted circle for barrel rotation annotations
@@ -544,14 +556,16 @@
     scene.add(barrelAnnotationGroup);
 
     // Fuscia arc from 2 inches above tip to pen body
-    const fusciaArcMaterial = new THREE.LineBasicMaterial({ color: 0xff00ff, linewidth: 2 });
+    const fusciaArcThickness = 0.02; // Thickness of the fuscia arc tube in inches
+    const fusciaArcMaterial = new THREE.MeshBasicMaterial({ color: 0xff00ff });
     const fusciaArcGeometry = new THREE.BufferGeometry();
-    const fusciaArcLine = new THREE.Line(fusciaArcGeometry, fusciaArcMaterial);
+    const fusciaArcLine = new THREE.Mesh(fusciaArcGeometry, fusciaArcMaterial);
     scene.add(fusciaArcLine);
     
     // Fuscia vertical line from pen tip to beginning of arc
+    const fusciaVerticalLineMaterial = new THREE.LineBasicMaterial({ color: 0xff00ff, linewidth: 2 });
     const fusciaVerticalLineGeometry = new THREE.BufferGeometry();
-    const fusciaVerticalLine = new THREE.Line(fusciaVerticalLineGeometry, fusciaArcMaterial);
+    const fusciaVerticalLine = new THREE.Line(fusciaVerticalLineGeometry, fusciaVerticalLineMaterial);
     scene.add(fusciaVerticalLine);
     
     // Fuscia semicircle for tilt altitude annotation (dotted)
@@ -713,8 +727,15 @@
                     
                     // Create circular arc
                     const fusciaArcPoints = createCircularArcInPlane(arcCenter, fusciaU, fusciaV, arcRadius, fusciaStartAngle, fusciaEndAngle, 32);
-                    fusciaArcGeometry.setFromPoints(fusciaArcPoints);
-                    fusciaArcGeometry.attributes.position.needsUpdate = true;
+                    // Create a curve from the points
+                    const fusciaArcCurve = createCurveFromPoints(fusciaArcPoints);
+                    // Create a tube geometry along the curve
+                    const fusciaTubeGeometry = new THREE.TubeGeometry(fusciaArcCurve, 32, fusciaArcThickness, 8, false);
+                    // Dispose old geometry if it exists
+                    if (fusciaArcLine.geometry) {
+                        fusciaArcLine.geometry.dispose();
+                    }
+                    fusciaArcLine.geometry = fusciaTubeGeometry;
                     fusciaArcLine.visible = true;
                     
                     // Create dotted fuscia circle (full 360 degrees) that follows the path of the arc
@@ -801,8 +822,15 @@
                 // Show arc if azimuth is significant
                 if (arcLength > 0.1) {
                     const arcPoints = createArcPoints(arcCenterX, arcCenterZ, arcRadius, startAngle, endAngle, arcSegments);
-                    arcGeometry.setFromPoints(arcPoints);
-                    arcGeometry.attributes.position.needsUpdate = true;
+                    // Create a curve from the points
+                    const arcCurve = createCurveFromPoints(arcPoints);
+                    // Create a tube geometry along the curve
+                    const tubeGeometry = new THREE.TubeGeometry(arcCurve, arcSegments, arcThickness, 8, false);
+                    // Dispose old geometry if it exists
+                    if (arcLine.geometry) {
+                        arcLine.geometry.dispose();
+                    }
+                    arcLine.geometry = tubeGeometry;
                     arcLine.visible = true;
                     
                     // Update arrow at end of arc
@@ -844,8 +872,15 @@
                     // Only show barrel arc if rotation is significant
                     if (barrelArcLength > 0.1) {
                         const barrelArcPoints = createBarrelArcPoints(barrelCenter, penAxis, u, v, barrelArcRadius, barrelStartAngle, barrelEndAngle, barrelArcSegments);
-                        barrelArcGeometry.setFromPoints(barrelArcPoints);
-                        barrelArcGeometry.attributes.position.needsUpdate = true;
+                        // Create a curve from the points
+                        const barrelArcCurve = createCurveFromPoints(barrelArcPoints);
+                        // Create a tube geometry along the curve
+                        const barrelTubeGeometry = new THREE.TubeGeometry(barrelArcCurve, barrelArcSegments, barrelArcThickness, 8, false);
+                        // Dispose old geometry if it exists
+                        if (barrelArcLine.geometry) {
+                            barrelArcLine.geometry.dispose();
+                        }
+                        barrelArcLine.geometry = barrelTubeGeometry;
                         barrelArcLine.visible = true;
                         
                         // Update arrow at end of barrel arc
