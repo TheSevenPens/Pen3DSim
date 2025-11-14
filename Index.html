@@ -683,20 +683,26 @@
                 // Calculate angle of pen axis in the plane
                 const fusciaEndAngle = Math.atan2(penAxisDir.dot(fusciaV), penAxisDir.dot(fusciaU));
                 
-                // Create circular arc
-                const fusciaArcPoints = createCircularArcInPlane(arcCenter, fusciaU, fusciaV, arcRadius, fusciaStartAngle, fusciaEndAngle, 32);
-                fusciaArcGeometry.setFromPoints(fusciaArcPoints);
-                fusciaArcGeometry.attributes.position.needsUpdate = true;
-                fusciaArcLine.visible = true;
-                
-                // Create fuscia semicircle (180 degrees) rotated clockwise by 180 degrees in its plane
-                const fusciaSemicircleStartAngle = fusciaStartAngle - Math.PI / 2; // Rotate clockwise by 180 degrees from previous position
-                const fusciaSemicircleEndAngle = fusciaSemicircleStartAngle + Math.PI; // 180 degrees from rotated start
-                const fusciaSemicirclePoints = createCircularArcInPlane(arcCenter, fusciaU, fusciaV, arcRadius, fusciaSemicircleStartAngle, fusciaSemicircleEndAngle, 32);
-                fusciaSemicircleGeometry.setFromPoints(fusciaSemicirclePoints);
-                fusciaSemicircleGeometry.attributes.position.needsUpdate = true;
-                fusciaSemicircleLine.computeLineDistances(); // Required for dashed lines
-                fusciaSemicircleLine.visible = true;
+                // Only show tilt altitude annotations if altitude is not zero
+                if (altitude !== 0) {
+                    // Create circular arc
+                    const fusciaArcPoints = createCircularArcInPlane(arcCenter, fusciaU, fusciaV, arcRadius, fusciaStartAngle, fusciaEndAngle, 32);
+                    fusciaArcGeometry.setFromPoints(fusciaArcPoints);
+                    fusciaArcGeometry.attributes.position.needsUpdate = true;
+                    fusciaArcLine.visible = true;
+                    
+                    // Create fuscia semicircle (180 degrees) rotated clockwise by 180 degrees in its plane
+                    const fusciaSemicircleStartAngle = fusciaStartAngle - Math.PI / 2; // Rotate clockwise by 180 degrees from previous position
+                    const fusciaSemicircleEndAngle = fusciaSemicircleStartAngle + Math.PI; // 180 degrees from rotated start
+                    const fusciaSemicirclePoints = createCircularArcInPlane(arcCenter, fusciaU, fusciaV, arcRadius, fusciaSemicircleStartAngle, fusciaSemicircleEndAngle, 32);
+                    fusciaSemicircleGeometry.setFromPoints(fusciaSemicirclePoints);
+                    fusciaSemicircleGeometry.attributes.position.needsUpdate = true;
+                    fusciaSemicircleLine.computeLineDistances(); // Required for dashed lines
+                    fusciaSemicircleLine.visible = true;
+                } else {
+                    fusciaArcLine.visible = false;
+                    fusciaSemicircleLine.visible = false;
+                }
                 
                 penTipLinePositions[0] = penTipWorld.x;
                 penTipLinePositions[1] = penTipWorld.y;
