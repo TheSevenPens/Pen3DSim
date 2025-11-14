@@ -540,6 +540,30 @@
     
     scene.add(barrelAnnotationGroup);
 
+    // Fuscia arc from 2 inches above tip to pen body
+    const fusciaArcMaterial = new THREE.LineBasicMaterial({ color: 0xff00ff, linewidth: 2 });
+    const fusciaArcGeometry = new THREE.BufferGeometry();
+    const fusciaArcLine = new THREE.Line(fusciaArcGeometry, fusciaArcMaterial);
+    scene.add(fusciaArcLine);
+    
+    // Helper function to create circular arc points in a plane
+    function createCircularArcInPlane(center, u, v, radius, startAngle, endAngle, segments) {
+        const points = [];
+        for (let i = 0; i <= segments; i++) {
+            const angle = startAngle + (endAngle - startAngle) * (i / segments);
+            const cosA = Math.cos(angle);
+            const sinA = Math.sin(angle);
+            // Point in the plane: center + radius * (cos(angle) * u + sin(angle) * v)
+            const point = center.clone().add(
+                u.clone().multiplyScalar(radius * cosA)
+            ).add(
+                v.clone().multiplyScalar(radius * sinA)
+            );
+            points.push(point);
+        }
+        return points;
+    }
+
     const penTopLocal = new THREE.Vector3(0, 4, 0); // barrelHeight = 4
     const penTopWorld = new THREE.Vector3();
     const penLineBottom = new THREE.Vector3();
@@ -623,6 +647,36 @@
                 penTipWorld.copy(penTipLocal).applyMatrix4(penGroup.matrixWorld);
                 // Point directly below tip on tablet surface (same X and Z, Y = tabletTopY)
                 penTipLineBottom.set(penTipWorld.x, tabletTopY, penTipWorld.z);
+                
+                // Update fuscia arc from 2 inches above tip to pen body
+                // Arc is a circular arc centered at the tip, in the plane formed by the vertical line and the pen's long axis
+                
+                const arcCenter = penTipWorld.clone();
+                const arcRadius = 2.0; // inches
+                
+                // Get directions for the plane
+                const verticalDir = new THREE.Vector3(0, 1, 0);
+                const penAxisDir = new THREE.Vector3(0, 1, 0).applyQuaternion(quaternion).normalize();
+                
+                // Create basis vectors for the plane
+                // fusciaU: direction from center to start point (vertical direction, normalized)
+                const fusciaU = verticalDir.clone().normalize();
+                
+                // fusciaV: direction from center to end point (pen axis direction, but we need to make it perpendicular to fusciaU in the plane)
+                // Project pen axis onto the plane perpendicular to vertical, then normalize
+                const penAxisProjected = penAxisDir.clone().sub(fusciaU.clone().multiplyScalar(penAxisDir.dot(fusciaU)));
+                const fusciaV = penAxisProjected.length() > 0.001 ? penAxisProjected.normalize() : new THREE.Vector3(1, 0, 0).applyQuaternion(quaternion).normalize();
+                
+                // Calculate angles: start is at 0° (vertical up), end is at the angle of the pen axis in the plane
+                const fusciaStartAngle = 0; // Vertical direction
+                // Calculate angle of pen axis in the plane
+                const fusciaEndAngle = Math.atan2(penAxisDir.dot(fusciaV), penAxisDir.dot(fusciaU));
+                
+                // Create circular arc
+                const fusciaArcPoints = createCircularArcInPlane(arcCenter, fusciaU, fusciaV, arcRadius, fusciaStartAngle, fusciaEndAngle, 32);
+                fusciaArcGeometry.setFromPoints(fusciaArcPoints);
+                fusciaArcGeometry.attributes.position.needsUpdate = true;
+                fusciaArcLine.visible = true;
                 
                 penTipLinePositions[0] = penTipWorld.x;
                 penTipLinePositions[1] = penTipWorld.y;
