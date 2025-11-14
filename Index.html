@@ -154,13 +154,17 @@
     scene.background = new THREE.Color(0x1a1a1a);
 
     // Camera
+    const cameraFOV = 30;
+    const cameraAspectRatio = viewer.clientWidth / viewer.clientHeight;
+    const cameraNear = 0.1;
+    const cameraFar = 1000;
     const camera = new THREE.PerspectiveCamera(
-        75,
-        viewer.clientWidth / viewer.clientHeight,
-        0.1,
-        1000
+        cameraFOV,
+        cameraAspectRatio,
+        cameraNear,
+        cameraFar
     );
-    camera.position.set(20, 15, 25);
+    camera.position.set(0, 15, 25);
     camera.lookAt(0, 0, 0);
 
     // Renderer
@@ -180,17 +184,21 @@
     controls.maxPolarAngle = Math.PI / 2;
 
     // Lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+    const ambientLightColor = 0xffffff;
+    const directionalLightColor = 0xffffff;
+    const pointLightColor = 0xffffff;
+
+    const ambientLight = new THREE.AmbientLight( ambientLightColor, 0.5);
     scene.add(ambientLight);
 
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    const directionalLight = new THREE.DirectionalLight(directionalLightColor, 0.8);
     directionalLight.position.set(0, 20, 0);
     directionalLight.castShadow = true;
     directionalLight.shadow.mapSize.width = 2048;
     directionalLight.shadow.mapSize.height = 2048;
     scene.add(directionalLight);
 
-    const pointLight = new THREE.PointLight(0xffffff, 0.3);
+    const pointLight = new THREE.PointLight(pointLightColor, 0.3);
     pointLight.position.set(-10, 10, -10);
     scene.add(pointLight);
 
@@ -422,7 +430,6 @@
         tiltAzimuth = parseFloat(e.target.value);
         azimuthValueDisplay.textContent = tiltAzimuth.toFixed(0);
         const distance = parseFloat(penDistanceSlider.value);
-        console.log('Azimuth:', tiltAzimuth, 'Distance:', distance, 'Altitude:', tiltAltitude);
         updatePenTransform(distance, tiltAltitude, tiltAzimuth, barrelRotation);
     });
 
@@ -445,7 +452,7 @@
         canvas.height = 64;
 
         context.fillStyle = color;
-        context.font = 'Bold 48px Arial';
+        context.font = 'Bold 24px Arial';
         context.textAlign = 'center';
         context.textBaseline = 'middle';
         context.fillText(text, 32, 32);
@@ -464,7 +471,7 @@
     const yLabelUser = 'Z';
     const zLabelUser = 'Y';
 
-    const xLabelDistance = 11;
+    const xLabelDistance = 12;
     const yLabelDistance = 7;
     const zLabelDistance = 8;
 
@@ -530,7 +537,7 @@
         const dataURL = renderer.domElement.toDataURL('image/png');
 
         const link = document.createElement('a');
-        link.download = '3d-render.png';
+        link.download = 'Pen3DSim-render.png';
         link.href = dataURL;
         link.click();
     });
