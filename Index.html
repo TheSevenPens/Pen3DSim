@@ -11,51 +11,33 @@
     <h2>Controls</h2>
 
     <div class="control-group">
-        <label>Hover distance</label>
-        <div class="slider-container">
-            <input type="range" id="pen-distance" min="0" max="1" step="0.01" value="0">
-            <div class="slider-value"><span id="distance-value">0.00</span> inches</div>
-        </div>
+        <label>Hover distance: <span class="slider-value"><span id="distance-value">0.00</span> inches</span></label>
+        <input type="range" id="pen-distance" min="0" max="1" step="0.01" value="0">
     </div>
 
     <div class="control-group">
-        <label>Tilt altitude</label>
-        <div class="slider-container">
-            <input type="range" id="tilt-altitude" min="0" max="60" step="1" value="30">
-            <div class="slider-value"><span id="altitude-value">30</span>°</div>
-        </div>
+        <label>Tilt altitude: <span class="slider-value"><span id="altitude-value">30</span>°</span></label>
+        <input type="range" id="tilt-altitude" min="0" max="60" step="1" value="30">
     </div>
 
     <div class="control-group">
-        <label>Tilt azimuth</label>
-        <div class="slider-container">
-            <input type="range" id="tilt-azimuth" min="0" max="359" step="1" value="0">
-            <div class="slider-value"><span id="azimuth-value">0</span>°</div>
-        </div>
+        <label>Tilt azimuth: <span class="slider-value"><span id="azimuth-value">0</span>°</span></label>
+        <input type="range" id="tilt-azimuth" min="0" max="359" step="1" value="0">
     </div>
 
     <div class="control-group">
-        <label>Barrel rotation</label>
-        <div class="slider-container">
-            <input type="range" id="barrel-rotation" min="0" max="359" step="1" value="0">
-            <div class="slider-value"><span id="barrel-rotation-value">0</span>°</div>
-        </div>
+        <label>Barrel rotation: <span class="slider-value"><span id="barrel-rotation-value">0</span>°</span></label>
+        <input type="range" id="barrel-rotation" min="0" max="359" step="1" value="0">
     </div>
 
     <div class="control-group">
-        <label>X</label>
-        <div class="slider-container">
-            <input type="range" id="tablet-position-x" min="-8" max="8" step="0.1" value="0">
-            <div class="slider-value"><span id="tablet-position-x-value">0.0</span> in</div>
-        </div>
+        <label>X: <span class="slider-value"><span id="tablet-position-x-value">0.0</span> in</span></label>
+        <input type="range" id="tablet-position-x" min="-8" max="8" step="0.1" value="0">
     </div>
 
     <div class="control-group">
-        <label>Y</label>
-        <div class="slider-container">
-            <input type="range" id="tablet-position-z" min="-4.5" max="4.5" step="0.1" value="0">
-            <div class="slider-value"><span id="tablet-position-z-value">0.0</span> in</div>
-        </div>
+        <label>Y: <span class="slider-value"><span id="tablet-position-z-value">0.0</span> in</span></label>
+        <input type="range" id="tablet-position-z" min="-4.5" max="4.5" step="0.1" value="0">
     </div>
 
     <div class="control-group">
@@ -69,6 +51,13 @@
         <label style="display: flex; align-items: center; gap: 8px;">
             <input type="checkbox" id="azimuth-annotations" checked style="width: auto; margin: 0;">
             <span>Show tilt azimuth annotations</span>
+        </label>
+    </div>
+
+    <div class="control-group">
+        <label style="display: flex; align-items: center; gap: 8px;">
+            <input type="checkbox" id="altitude-annotations" checked style="width: auto; margin: 0;">
+            <span>Show tilt altitude annotations</span>
         </label>
     </div>
 
@@ -588,6 +577,7 @@
         let barrelRotation = 0; // degrees
         let tabletOffsetX = 0; // inches
         let tabletOffsetZ = 0; // inches
+        let showAltitudeAnnotations = true; // checkbox state
 
         // Calculate pen position and rotation based on distance and tilt using quaternions
         function updatePenTransform(distance, altitude, azimuth, barrel) {
@@ -683,8 +673,8 @@
                 // Calculate angle of pen axis in the plane
                 const fusciaEndAngle = Math.atan2(penAxisDir.dot(fusciaV), penAxisDir.dot(fusciaU));
                 
-                // Only show tilt altitude annotations if altitude is not zero
-                if (altitude !== 0) {
+                // Only show tilt altitude annotations if altitude is not zero and checkbox is checked
+                if (altitude !== 0 && showAltitudeAnnotations) {
                     // Create circular arc
                     const fusciaArcPoints = createCircularArcInPlane(arcCenter, fusciaU, fusciaV, arcRadius, fusciaStartAngle, fusciaEndAngle, 32);
                     fusciaArcGeometry.setFromPoints(fusciaArcPoints);
@@ -1083,6 +1073,15 @@
         arcAnnotationGroup.visible = isVisible;
         surfaceLine.visible = isVisible;
         surfaceArrowLine.visible = isVisible;
+    });
+    
+    // Tilt altitude annotations visibility checkbox
+    const altitudeAnnotationsCheckbox = document.getElementById('altitude-annotations');
+    altitudeAnnotationsCheckbox.addEventListener('change', (e) => {
+        showAltitudeAnnotations = e.target.checked;
+        // Update visibility immediately and trigger a pen transform update
+        const distance = parseFloat(penDistanceSlider.value);
+        updatePenTransform(distance, tiltAltitude, tiltAzimuth, barrelRotation);
     });
 
     // Export as PNG

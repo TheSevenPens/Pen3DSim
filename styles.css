@@ -23,35 +23,30 @@ body {
 
 #control-panel h2 {
     color: #fff;
-    margin-bottom: 20px;
+    margin-bottom: 12px;
     font-size: 18px;
 }
 
 .control-group {
-    margin-bottom: 20px;
+    margin-bottom: 12px;
 }
 
 .control-group label {
     color: #fff;
     display: block;
-    margin-bottom: 8px;
+    margin-bottom: 4px;
     font-size: 14px;
-}
-
-.slider-container {
-    display: flex;
-    flex-direction: column;
-}
-
-input[type="range"] {
-    width: 100%;
-    margin-bottom: 5px;
 }
 
 .slider-value {
     color: #aaa;
     font-size: 12px;
-    text-align: center;
+    font-weight: normal;
+}
+
+input[type="range"] {
+    width: 100%;
+    margin-bottom: 0;
 }
 
 #export-btn {
