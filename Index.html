@@ -42,6 +42,22 @@
         </div>
     </div>
 
+    <div class="control-group">
+        <label>Tablet Position X</label>
+        <div class="slider-container">
+            <input type="range" id="tablet-position-x" min="-8" max="8" step="0.1" value="0">
+            <div class="slider-value"><span id="tablet-position-x-value">0.0</span> in</div>
+        </div>
+    </div>
+
+    <div class="control-group">
+        <label>Tablet Position Z</label>
+        <div class="slider-container">
+            <input type="range" id="tablet-position-z" min="-4.5" max="4.5" step="0.1" value="0">
+            <div class="slider-value"><span id="tablet-position-z-value">0.0</span> in</div>
+        </div>
+    </div>
+
     <button id="export-btn">Export as PNG</button>
 </div>
 <div id="viewer">
@@ -247,14 +263,27 @@
     const penLine = new THREE.Line(penLineGeometry, penLineMaterial);
     scene.add(penLine);
 
-    const penTopLocal = new THREE.Vector3(0, barrelHeight, 0);
+    // Line from pen tip to tablet surface
+    const penTipLinePositions = new Float32Array(6);
+    const penTipLineGeometry = new THREE.BufferGeometry();
+    penTipLineGeometry.setAttribute('position', new THREE.BufferAttribute(penTipLinePositions, 3));
+
+    const penTipLine = new THREE.Line(penTipLineGeometry, penLineMaterial);
+    scene.add(penTipLine);
+
+    const penTopLocal = new THREE.Vector3(0, 4, 0); // barrelHeight = 4
     const penTopWorld = new THREE.Vector3();
     const penLineBottom = new THREE.Vector3();
+    const penTipLocal = new THREE.Vector3(0, -0.5, 0); // tipHeight = 0.5
+    const penTipWorld = new THREE.Vector3();
+    const penTipLineBottom = new THREE.Vector3();
 
         // Pen tilt parameters
         let tiltAltitude = 30; // degrees
         let tiltAzimuth = 0; // degrees
         let barrelRotation = 0; // degrees
+        let tabletOffsetX = 0; // inches
+        let tabletOffsetZ = 0; // inches
 
         // Calculate pen position and rotation based on distance and tilt using quaternions
         function updatePenTransform(distance, altitude, azimuth, barrel) {
@@ -268,9 +297,9 @@
             const barrelRad = (barrel * Math.PI) / 180;
         
             // The tip contact point on the tablet (fixed in world space)
-            const tipContactX = 0;
+            const tipContactX = THREE.MathUtils.clamp(tabletOffsetX, -tabletWidth / 2, tabletWidth / 2);
             const tipContactY = tabletTopY + distance;
-            const tipContactZ = 0;
+            const tipContactZ = THREE.MathUtils.clamp(tabletOffsetZ, -tabletDepth / 2, tabletDepth / 2);
         
                 // Create quaternions for each rotation
                 // Azimuth rotation (around world Y axis)
@@ -321,8 +350,22 @@
                 penLinePositions[4] = penLineBottom.y;
                 penLinePositions[5] = penLineBottom.z;
 
+                // Calculate actual pen tip position in world space
+                penTipWorld.copy(penTipLocal).applyMatrix4(penGroup.matrixWorld);
+                // Point directly below tip on tablet surface (same X and Z, Y = tabletTopY)
+                penTipLineBottom.set(penTipWorld.x, tabletTopY, penTipWorld.z);
+                
+                penTipLinePositions[0] = penTipWorld.x;
+                penTipLinePositions[1] = penTipWorld.y;
+                penTipLinePositions[2] = penTipWorld.z;
+                penTipLinePositions[3] = penTipLineBottom.x;
+                penTipLinePositions[4] = penTipLineBottom.y;
+                penTipLinePositions[5] = penTipLineBottom.z;
+
                 penLineGeometry.attributes.position.needsUpdate = true;
                 penLine.computeLineDistances();
+                penTipLineGeometry.attributes.position.needsUpdate = true;
+                penTipLine.computeLineDistances();
             }
 
         // Initialize pen position
@@ -346,7 +389,6 @@
             barrelRotation = parseFloat(e.target.value);
             barrelRotationValueDisplay.textContent = barrelRotation.toFixed(0);
             const distance = parseFloat(penDistanceSlider.value);
-            console.log('Barrel Rotation:', barrelRotation, 'Distance:', distance, 'Altitude:', tiltAltitude, 'Azimuth:', tiltAzimuth);
             updatePenTransform(distance, tiltAltitude, tiltAzimuth, barrelRotation);
         });
 
@@ -358,7 +400,6 @@
         tiltAltitude = parseFloat(e.target.value);
         altitudeValueDisplay.textContent = tiltAltitude.toFixed(0);
         const distance = parseFloat(penDistanceSlider.value);
-        console.log('Altitude:', tiltAltitude, 'Distance:', distance, 'Azimuth:', tiltAzimuth);
         updatePenTransform(distance, tiltAltitude, tiltAzimuth, barrelRotation);
     });
 
@@ -369,6 +410,26 @@
     tiltAzimuthSlider.addEventListener('input', (e) => {
         tiltAzimuth = parseFloat(e.target.value);
         azimuthValueDisplay.textContent = tiltAzimuth.toFixed(0);
+        const distance = parseFloat(penDistanceSlider.value);
+        updatePenTransform(distance, tiltAltitude, tiltAzimuth, barrelRotation);
+    });
+
+    // Tablet position sliders
+    const tabletPositionXSlider = document.getElementById('tablet-position-x');
+    const tabletPositionXValueDisplay = document.getElementById('tablet-position-x-value');
+    const tabletPositionZSlider = document.getElementById('tablet-position-z');
+    const tabletPositionZValueDisplay = document.getElementById('tablet-position-z-value');
+
+    tabletPositionXSlider.addEventListener('input', (e) => {
+        tabletOffsetX = parseFloat(e.target.value);
+        tabletPositionXValueDisplay.textContent = tabletOffsetX.toFixed(1);
+        const distance = parseFloat(penDistanceSlider.value);
+        updatePenTransform(distance, tiltAltitude, tiltAzimuth, barrelRotation);
+    });
+
+    tabletPositionZSlider.addEventListener('input', (e) => {
+        tabletOffsetZ = parseFloat(e.target.value);
+        tabletPositionZValueDisplay.textContent = tabletOffsetZ.toFixed(1);
         const distance = parseFloat(penDistanceSlider.value);
         updatePenTransform(distance, tiltAltitude, tiltAzimuth, barrelRotation);
     });
