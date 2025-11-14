@@ -154,6 +154,14 @@
     directionalLight.castShadow = true;
     directionalLight.shadow.mapSize.width = 2048;
     directionalLight.shadow.mapSize.height = 2048;
+    // Configure shadow camera frustum to cover the entire area where pen can move
+    // Tablet is 16" wide, pen can move with offset X from -8 to +8, plus margin
+    directionalLight.shadow.camera.left = -15;
+    directionalLight.shadow.camera.right = 15;
+    directionalLight.shadow.camera.top = 15;
+    directionalLight.shadow.camera.bottom = -15;
+    directionalLight.shadow.camera.near = 0.1;
+    directionalLight.shadow.camera.far = 50;
     scene.add(directionalLight);
 
     const pointLight = new THREE.PointLight(pointLightColor, 0.3);
