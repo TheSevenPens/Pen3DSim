@@ -373,6 +373,7 @@
     const arrowMaterial = new THREE.LineBasicMaterial({ color: 0x00ff00, linewidth: 2 });
     const arrowGeometry = new THREE.BufferGeometry();
     const arrowLine = new THREE.Line(arrowGeometry, arrowMaterial);
+    arrowLine.visible = false; // Arrowheads removed
     arcAnnotationGroup.add(arrowLine);
     
     // Dotted arc to complete the remaining part of the circle
@@ -397,6 +398,7 @@
     // Arrow at end of surface line
     const surfaceArrowGeometry = new THREE.BufferGeometry();
     const surfaceArrowLine = new THREE.Line(surfaceArrowGeometry, surfaceLineMaterial);
+    surfaceArrowLine.visible = false; // Arrowheads removed
     scene.add(surfaceArrowLine);
     
     // Helper function to create arrow on surface
@@ -531,6 +533,7 @@
     
     const barrelArrowGeometry = new THREE.BufferGeometry();
     const barrelArrowLine = new THREE.Line(barrelArrowGeometry, barrelArrowMaterial);
+    barrelArrowLine.visible = false; // Arrowheads removed
     barrelAnnotationGroup.add(barrelArrowLine);
     
     // Line from center extending in barrel rotation direction
@@ -540,6 +543,7 @@
     
     const barrelSurfaceArrowGeometry = new THREE.BufferGeometry();
     const barrelSurfaceArrowLine = new THREE.Line(barrelSurfaceArrowGeometry, barrelArrowMaterial);
+    barrelSurfaceArrowLine.visible = false; // Arrowheads removed
     barrelAnnotationGroup.add(barrelSurfaceArrowLine);
     
     // Dotted circle for barrel rotation annotations
@@ -788,7 +792,7 @@
                 surfaceLineGeometry.setFromPoints(surfaceLinePoints);
                 surfaceLineGeometry.attributes.position.needsUpdate = true;
                 
-                // Update arrow at end of surface line
+                // Update arrow at end of surface line (arrowheads removed)
                 const surfaceArrowPoints = createSurfaceArrow(
                     penTipLineBottom.x, penTipLineBottom.z,
                     extendedEndX, extendedEndZ
@@ -796,9 +800,9 @@
                 if (surfaceArrowPoints.length > 0) {
                     surfaceArrowGeometry.setFromPoints(surfaceArrowPoints);
                     surfaceArrowGeometry.attributes.position.needsUpdate = true;
-                    surfaceArrowLine.visible = true;
+                    // surfaceArrowLine.visible = true; // Arrowheads removed
                 } else {
-                    surfaceArrowLine.visible = false;
+                    // surfaceArrowLine.visible = false; // Arrowheads removed
                 }
                 
                 // Update arc annotation
@@ -833,13 +837,13 @@
                     arcLine.geometry = tubeGeometry;
                     arcLine.visible = true;
                     
-                    // Update arrow at end of arc
+                    // Update arrow at end of arc (arrowheads removed)
                     const arrowPoints = createArrow(arcCenterX, arcCenterZ, arcRadius, endAngle);
                     arrowGeometry.setFromPoints(arrowPoints);
                     arrowGeometry.attributes.position.needsUpdate = true;
-                    arrowLine.visible = true;
+                    // arrowLine.visible = true; // Arrowheads removed
                 } else {
-                    arrowLine.visible = false;
+                    // arrowLine.visible = false; // Arrowheads removed
                     arcLine.visible = false;
                 }
                 
@@ -883,13 +887,13 @@
                         barrelArcLine.geometry = barrelTubeGeometry;
                         barrelArcLine.visible = true;
                         
-                        // Update arrow at end of barrel arc
+                        // Update arrow at end of barrel arc (arrowheads removed)
                         const barrelArrowPoints = createBarrelArrow(barrelCenter, penAxis, u, v, barrelArcRadius, barrelEndAngle);
                         barrelArrowGeometry.setFromPoints(barrelArrowPoints);
                         barrelArrowGeometry.attributes.position.needsUpdate = true;
-                        barrelArrowLine.visible = true;
+                        // barrelArrowLine.visible = true; // Arrowheads removed
                     } else {
-                        barrelArrowLine.visible = false;
+                        // barrelArrowLine.visible = false; // Arrowheads removed
                         barrelArcLine.visible = false;
                     }
                     
@@ -915,14 +919,14 @@
                     barrelSurfaceLineGeometry.attributes.position.needsUpdate = true;
                     barrelSurfaceLine.visible = true;
                     
-                    // Update arrow at end of barrel surface line
+                    // Update arrow at end of barrel surface line (arrowheads removed)
                     const barrelSurfaceArrowPoints = createBarrelSurfaceArrow(barrelCenter, barrelDirection, penAxis);
                     if (barrelSurfaceArrowPoints.length > 0) {
                         barrelSurfaceArrowGeometry.setFromPoints(barrelSurfaceArrowPoints);
                         barrelSurfaceArrowGeometry.attributes.position.needsUpdate = true;
-                        barrelSurfaceArrowLine.visible = true;
+                        // barrelSurfaceArrowLine.visible = true; // Arrowheads removed
                     } else {
-                        barrelSurfaceArrowLine.visible = false;
+                        // barrelSurfaceArrowLine.visible = false; // Arrowheads removed
                     }
                 } else {
                     // Hide all barrel annotations
@@ -1164,7 +1168,7 @@
         const isVisible = e.target.checked;
         arcAnnotationGroup.visible = isVisible;
         surfaceLine.visible = isVisible;
-        surfaceArrowLine.visible = isVisible;
+        // surfaceArrowLine.visible = isVisible; // Arrowheads removed
     });
     
     // Tilt altitude annotations visibility checkbox
