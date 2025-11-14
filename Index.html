@@ -363,6 +363,17 @@
     const arrowLine = new THREE.Line(arrowGeometry, arcMaterial);
     arcAnnotationGroup.add(arrowLine);
     
+    // Dotted arc to complete the remaining part of the circle
+    const dottedArcMaterial = new THREE.LineDashedMaterial({ 
+        color: 0x00ff00, 
+        dashSize: 0.1, 
+        gapSize: 0.1,
+        linewidth: 2 
+    });
+    const dottedArcGeometry = new THREE.BufferGeometry();
+    const dottedArcLine = new THREE.Line(dottedArcGeometry, dottedArcMaterial);
+    arcAnnotationGroup.add(dottedArcLine);
+    
     scene.add(arcAnnotationGroup);
 
     // Line on tablet surface from tip projection to top projection
@@ -674,9 +685,18 @@
                     arrowGeometry.setFromPoints(arrowPoints);
                     arrowGeometry.attributes.position.needsUpdate = true;
                     arrowLine.visible = true;
+                    
+                    // Create dotted circle (full 360°)
+                    const dottedCircleSegments = 64; // Enough segments for a smooth circle
+                    const dottedCirclePoints = createArcPoints(arcCenterX, arcCenterZ, arcRadius, 0, 2 * Math.PI, dottedCircleSegments);
+                    dottedArcGeometry.setFromPoints(dottedCirclePoints);
+                    dottedArcGeometry.attributes.position.needsUpdate = true;
+                    dottedArcLine.computeLineDistances(); // Required for dashed lines
+                    dottedArcLine.visible = true;
                 } else {
                     arrowLine.visible = false;
                     arcLine.visible = false;
+                    dottedArcLine.visible = false;
                 }
                 
                 // Update barrel rotation annotations (centered on top of pen, perpendicular to pen axis)
