@@ -254,6 +254,19 @@ class Pen3DSim {
         this.penTipLine = new THREE.Line(this.penTipLineGeometry, penTipLineMaterial);
         this.scene.add(this.penTipLine);
         
+        // White dotted line along pen's long axis from tip to tablet surface
+        this.penAxisLinePositions = new Float32Array(6);
+        this.penAxisLineGeometry = new THREE.BufferGeometry();
+        this.penAxisLineGeometry.setAttribute('position', new THREE.BufferAttribute(this.penAxisLinePositions, 3));
+        
+        const penAxisLineMaterial = new THREE.LineDashedMaterial({
+            color: 0xffffff,
+            dashSize: 0.2,
+            gapSize: 0.1
+        });
+        this.penAxisLine = new THREE.Line(this.penAxisLineGeometry, penAxisLineMaterial);
+        this.scene.add(this.penAxisLine);
+        
         // Local positions
         this.penTopLocal = new THREE.Vector3(0, 4, 0);
         this.penTopWorld = new THREE.Vector3();
@@ -261,6 +274,7 @@ class Pen3DSim {
         this.penTipLocal = new THREE.Vector3(0, -0.5, 0);
         this.penTipWorld = new THREE.Vector3();
         this.penTipLineBottom = new THREE.Vector3();
+        this.penAxisIntersection = new THREE.Vector3();
     }
     
     initAnnotations() {
@@ -765,12 +779,44 @@ class Pen3DSim {
         this.penTipWorld.copy(this.penTipLocal).applyMatrix4(this.penGroup.matrixWorld);
         this.penTipLineBottom.set(this.penTipWorld.x, tabletTopY, this.penTipWorld.z);
         
+        // Calculate intersection of pen's long axis with tablet surface
+        // Pen's long axis is the Y axis in pen's local space (0, 1, 0) transformed to world space
+        const penAxisDir = new THREE.Vector3(0, 1, 0).applyQuaternion(quaternion).normalize();
+        
+        // Find where the ray from pen tip along pen axis intersects the tablet surface (y = tabletTopY)
+        // Ray equation: penTipWorld + t * penAxisDir
+        // We want: penTipWorld.y + t * penAxisDir.y = tabletTopY
+        // So: t = (tabletTopY - penTipWorld.y) / penAxisDir.y
+        const penAxisDirY = penAxisDir.y;
+        if (Math.abs(penAxisDirY) > 0.001) {
+            // Pen axis is not horizontal, so it will intersect the tablet surface
+            const t = (tabletTopY - this.penTipWorld.y) / penAxisDirY;
+            this.penAxisIntersection.copy(this.penTipWorld).add(penAxisDir.clone().multiplyScalar(t));
+        } else {
+            // Pen is horizontal, extend the line a long distance in the pen axis direction
+            const extendDistance = 20; // inches
+            this.penAxisIntersection.copy(this.penTipWorld).add(penAxisDir.clone().multiplyScalar(extendDistance));
+            // Project to tablet surface
+            this.penAxisIntersection.y = tabletTopY;
+        }
+        
+        // Update white dotted line along pen axis
+        this.penAxisLinePositions[0] = this.penTipWorld.x;
+        this.penAxisLinePositions[1] = this.penTipWorld.y;
+        this.penAxisLinePositions[2] = this.penTipWorld.z;
+        this.penAxisLinePositions[3] = this.penAxisIntersection.x;
+        this.penAxisLinePositions[4] = this.penAxisIntersection.y;
+        this.penAxisLinePositions[5] = this.penAxisIntersection.z;
+        
+        this.penAxisLineGeometry.attributes.position.needsUpdate = true;
+        this.penAxisLine.computeLineDistances();
+        
         // Update fuscia arc (tilt altitude)
         const arcCenter = this.penTipWorld.clone();
         const arcRadius = 2.0;
         
         const verticalDir = new THREE.Vector3(0, 1, 0);
-        const penAxisDir = new THREE.Vector3(0, 1, 0).applyQuaternion(quaternion).normalize();
+        // Reuse penAxisDir calculated above
         
         const fusciaU = verticalDir.clone().normalize();
         const penAxisProjected = penAxisDir.clone().sub(fusciaU.clone().multiplyScalar(penAxisDir.dot(fusciaU)));
