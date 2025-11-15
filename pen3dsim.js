@@ -908,11 +908,11 @@ class Pen3DSim {
         this.penAxisLineGeometry.attributes.position.needsUpdate = true;
         this.penAxisLine.computeLineDistances();
         
-        // Update cursor arrow position to intersection point
+        // Update cursor arrow position to point directly below pen tip
         this.cursorArrow.position.set(
-            this.penAxisIntersection.x,
+            this.penTipLineBottom.x,
             this.yOffset,
-            this.penAxisIntersection.z
+            this.penTipLineBottom.z
         );
         
         // Update fuscia arc (tilt altitude)
