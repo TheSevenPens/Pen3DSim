@@ -193,7 +193,7 @@
         tabletPositionZValueDisplay.textContent = tabletZ.toFixed(1);
         sim.setTabletPositionZ(tabletZ);
     });
-
+    
     // Handle window resize
     window.addEventListener('resize', () => {
         sim.onResize();
@@ -407,7 +407,7 @@
             }
         });
     });
-    
+
     // Export as PNG
     document.getElementById('export-btn').addEventListener('click', () => {
         sim.exportAsPNG();

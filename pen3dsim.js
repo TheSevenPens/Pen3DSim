@@ -16,6 +16,8 @@ class Pen3DSim {
         this.showBarrelAnnotations = false;
         this.showTiltXAnnotations = false;
         this.showTiltYAnnotations = false;
+        this.cursorRotation = 180; // degrees around long axis
+        this.cursorTipRotationY = 90; // degrees around Y axis at tip
         
         // Constants
         this.tabletWidth = 16;
@@ -267,6 +269,10 @@ class Pen3DSim {
         this.penAxisLine = new THREE.Line(this.penAxisLineGeometry, penAxisLineMaterial);
         this.scene.add(this.penAxisLine);
         
+        // Windows mouse cursor arrow on tablet surface
+        this.cursorArrow = this.createCursorArrow();
+        this.scene.add(this.cursorArrow);
+        
         // Local positions
         this.penTopLocal = new THREE.Vector3(0, 4, 0);
         this.penTopWorld = new THREE.Vector3();
@@ -275,6 +281,97 @@ class Pen3DSim {
         this.penTipWorld = new THREE.Vector3();
         this.penTipLineBottom = new THREE.Vector3();
         this.penAxisIntersection = new THREE.Vector3();
+    }
+    
+    createCursorArrow() {
+        // Create Windows mouse cursor arrow shape
+        // The arrow points up-left (northwest direction)
+        // Tip is at origin (0, 0) so it aligns with intersection point
+        const cursorSize = 0.6; // inches (2x bigger)
+        const shape = new THREE.Shape();
+        
+        // Arrow tip at origin (0, 0) pointing up-left
+        // The tip is at the top-left of the arrow
+        const tipX = 0;
+        const tipZ = 0;
+        
+        // Arrow shape: tip at origin, body extends down-right
+        shape.moveTo(tipX, tipZ); // Tip (top-left)
+        shape.lineTo(tipX - cursorSize * 0.2, tipZ + cursorSize * 0.3); // Left edge
+        shape.lineTo(tipX - cursorSize * 0.1, tipZ + cursorSize * 0.3); // Left body
+        shape.lineTo(tipX - cursorSize * 0.1, tipZ + cursorSize * 0.6); // Bottom-left
+        shape.lineTo(tipX + cursorSize * 0.1, tipZ + cursorSize * 0.6); // Bottom-right
+        shape.lineTo(tipX + cursorSize * 0.1, tipZ + cursorSize * 0.3); // Right body
+        shape.lineTo(tipX + cursorSize * 0.2, tipZ + cursorSize * 0.3); // Right edge
+        shape.lineTo(tipX, tipZ); // Back to tip
+        
+        const geometry = new THREE.ShapeGeometry(shape);
+        
+        // White fill with black outline
+        const material = new THREE.MeshBasicMaterial({
+            color: 0xffffff,
+            side: THREE.DoubleSide
+        });
+        
+        const mesh = new THREE.Mesh(geometry, material);
+        
+        // Calculate mouse cursor rotation using quaternions
+        // The cursor should:
+        // 1. Be flat on XZ plane (tablet surface)
+        // 2. Point northwest (up-left direction)
+        // 3. Be rotated 45 degrees around its long axis
+        
+        // Step 1: Rotate from XY plane to XZ plane (flat on tablet)
+        // Rotate -90 degrees around X axis
+        const toXZPlaneQuat = new THREE.Quaternion();
+        toXZPlaneQuat.setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
+        
+        // Step 2: Rotate to point northwest (up-left)
+        // In XZ plane, northwest = -X direction + Z direction
+        // Rotate -45 degrees around Y axis, plus additional Y rotation from slider
+        const baseYRotation = -Math.PI / 4; // Base northwest direction
+        // cursorTipRotationY is already initialized to 90 in constructor
+        const pointNorthwestQuat = new THREE.Quaternion();
+        pointNorthwestQuat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), baseYRotation);
+        
+        // Step 3: Rotate 45 degrees around the arrow's long axis (local X axis after above rotations)
+        // The long axis is the direction the arrow points (northwest direction in XZ plane)
+        // After the above rotations, local X axis points northwest in the XZ plane
+        // To rotate around this axis while keeping it flat, we need to:
+        // 1. Apply base rotations first
+        // 2. Get the transformed local X axis (which is the long axis in world space)
+        // 3. Rotate around that axis
+        
+        // Apply base rotations first
+        const baseQuat = new THREE.Quaternion();
+        baseQuat.multiplyQuaternions(pointNorthwestQuat, toXZPlaneQuat);
+        
+        // Get the transformed local X axis (the long axis direction in world space)
+        // Local X axis (1, 0, 0) transformed by baseQuat gives us the long axis direction
+        const localXAxis = new THREE.Vector3(1, 0, 0);
+        const longAxisDir = localXAxis.applyQuaternion(baseQuat).normalize();
+        
+        // Store base quaternion and long axis direction for later updates
+        this.cursorBaseQuat = baseQuat.clone();
+        this.cursorLongAxisDir = longAxisDir.clone();
+        
+        // Store reference to mesh for rotation updates
+        this.cursorArrowMesh = mesh;
+        
+        // Apply initial rotation
+        this.updateCursorRotation();
+        
+        // Position will be updated in updatePenTransform
+        // Y position is set to yOffset to be exactly on tablet surface
+        mesh.position.set(0, this.yOffset, 0);
+        
+        // Add black outline
+        const edges = new THREE.EdgesGeometry(geometry);
+        const lineMaterial = new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 2 });
+        const wireframe = new THREE.LineSegments(edges, lineMaterial);
+        mesh.add(wireframe);
+        
+        return mesh;
     }
     
     initAnnotations() {
@@ -810,6 +907,13 @@ class Pen3DSim {
         
         this.penAxisLineGeometry.attributes.position.needsUpdate = true;
         this.penAxisLine.computeLineDistances();
+        
+        // Update cursor arrow position to intersection point
+        this.cursorArrow.position.set(
+            this.penAxisIntersection.x,
+            this.yOffset,
+            this.penAxisIntersection.z
+        );
         
         // Update fuscia arc (tilt altitude)
         const arcCenter = this.penTipWorld.clone();
@@ -1401,6 +1505,46 @@ class Pen3DSim {
         this.orthographicCamera.updateProjectionMatrix();
         
         this.renderer.setSize(this.viewer.clientWidth, this.viewer.clientHeight);
+    }
+    
+    updateCursorRotation() {
+        if (!this.cursorArrowMesh || !this.cursorBaseQuat) {
+            return;
+        }
+        
+        // Step 1: Apply Y-axis rotation at tip (around vertical axis)
+        const tipYRotQuat = new THREE.Quaternion();
+        tipYRotQuat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), (this.cursorTipRotationY * Math.PI) / 180);
+        
+        // Step 2: Combine base rotation with Y-axis rotation
+        // The Y rotation should be applied after the base rotation (to rotate the already-oriented cursor)
+        const baseWithYRot = new THREE.Quaternion();
+        baseWithYRot.multiplyQuaternions(tipYRotQuat, this.cursorBaseQuat);
+        
+        // Step 3: Rotate around the long axis by cursorRotation degrees
+        // Need to recalculate long axis direction after Y rotation
+        const localXAxis = new THREE.Vector3(1, 0, 0);
+        const longAxisDir = localXAxis.applyQuaternion(baseWithYRot).normalize();
+        
+        const longAxisRotQuat = new THREE.Quaternion();
+        longAxisRotQuat.setFromAxisAngle(longAxisDir, (this.cursorRotation * Math.PI) / 180);
+        
+        // Combine: first apply base rotation with Y rotation, then rotate around long axis
+        // For quaternions: final = longAxisRot * (tipYRot * baseQuat)
+        const finalQuat = new THREE.Quaternion();
+        finalQuat.multiplyQuaternions(longAxisRotQuat, baseWithYRot);
+        
+        this.cursorArrowMesh.setRotationFromQuaternion(finalQuat);
+    }
+    
+    setCursorRotation(angle) {
+        this.cursorRotation = angle;
+        this.updateCursorRotation();
+    }
+    
+    setCursorTipRotationY(angle) {
+        this.cursorTipRotationY = angle;
+        this.updateCursorRotation();
     }
     
     // Easing function for smooth animation (ease-in-out)
