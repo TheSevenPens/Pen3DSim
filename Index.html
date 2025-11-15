@@ -417,6 +417,15 @@
     const dottedArcLine = new THREE.Line(dottedArcGeometry, dottedArcMaterial);
     arcAnnotationGroup.add(dottedArcLine);
     
+    // Pie shape for azimuth arc (green with transparency)
+    const arcPieMaterial = new THREE.MeshBasicMaterial({ 
+        color: 0x00ff00, 
+        transparent: true, 
+        opacity: 0.3,
+        side: THREE.DoubleSide
+    });
+    let arcPieMesh = null;
+    
     scene.add(arcAnnotationGroup);
 
     // Line on tablet surface from tip projection to top projection
@@ -587,6 +596,15 @@
     const barrelDottedCircleLine = new THREE.Line(barrelDottedCircleGeometry, barrelDottedCircleMaterial);
     barrelAnnotationGroup.add(barrelDottedCircleLine);
     
+    // Pie shape for barrel rotation arc (orange with transparency)
+    const barrelPieMaterial = new THREE.MeshBasicMaterial({ 
+        color: 0xff8800, 
+        transparent: true, 
+        opacity: 0.3,
+        side: THREE.DoubleSide
+    });
+    let barrelPieMesh = null;
+    
     scene.add(barrelAnnotationGroup);
 
     // Fuscia arc from 2 inches above tip to pen body
@@ -595,6 +613,15 @@
     const fusciaArcGeometry = new THREE.BufferGeometry();
     const fusciaArcLine = new THREE.Mesh(fusciaArcGeometry, fusciaArcMaterial);
     scene.add(fusciaArcLine);
+    
+    // Pie shape for tilt altitude arc (fuscia with transparency)
+    const fusciaPieMaterial = new THREE.MeshBasicMaterial({ 
+        color: 0xff00ff, 
+        transparent: true, 
+        opacity: 0.3,
+        side: THREE.DoubleSide
+    });
+    let fusciaPieMesh = null;
     
     // Fuscia vertical line from pen tip to beginning of arc
     const fusciaVerticalLineMaterial = new THREE.LineBasicMaterial({ color: 0xff00ff, linewidth: 2 });
@@ -620,6 +647,15 @@
     const tiltXArcLine = new THREE.Mesh(tiltXArcGeometry, tiltXArcMaterial);
     scene.add(tiltXArcLine);
     
+    // Pie shape for tilt X arc (light blue with transparency)
+    const tiltXPieMaterial = new THREE.MeshBasicMaterial({ 
+        color: 0x88ccff, 
+        transparent: true, 
+        opacity: 0.3,
+        side: THREE.DoubleSide
+    });
+    let tiltXPieMesh = null;
+    
     const tiltXVerticalLineMaterial = new THREE.LineBasicMaterial({ color: 0x88ccff, linewidth: 2 });
     const tiltXVerticalLineGeometry = new THREE.BufferGeometry();
     const tiltXVerticalLine = new THREE.Line(tiltXVerticalLineGeometry, tiltXVerticalLineMaterial);
@@ -641,6 +677,15 @@
     const tiltYArcGeometry = new THREE.BufferGeometry();
     const tiltYArcLine = new THREE.Mesh(tiltYArcGeometry, tiltYArcMaterial);
     scene.add(tiltYArcLine);
+    
+    // Pie shape for tilt Y arc (pink with transparency)
+    const tiltYPieMaterial = new THREE.MeshBasicMaterial({ 
+        color: 0xff88cc, 
+        transparent: true, 
+        opacity: 0.3,
+        side: THREE.DoubleSide
+    });
+    let tiltYPieMesh = null;
     
     const tiltYVerticalLineMaterial = new THREE.LineBasicMaterial({ color: 0xff88cc, linewidth: 2 });
     const tiltYVerticalLineGeometry = new THREE.BufferGeometry();
@@ -673,6 +718,78 @@
             points.push(point);
         }
         return points;
+    }
+    
+    // Helper function to create pie shape geometry in XZ plane (tablet surface)
+    function createPieShapeXZ(centerX, centerZ, radius, startAngle, endAngle, yPos, segments = 32) {
+        const shape = new THREE.Shape();
+        // Start at center
+        shape.moveTo(0, 0);
+        // Create arc from startAngle to endAngle
+        for (let i = 0; i <= segments; i++) {
+            const angle = startAngle + (endAngle - startAngle) * (i / segments);
+            const x = radius * Math.cos(angle);
+            const z = radius * Math.sin(angle);
+            if (i === 0) {
+                shape.lineTo(x, z);
+            } else {
+                shape.lineTo(x, z);
+            }
+        }
+        // Close the shape back to center
+        shape.lineTo(0, 0);
+        
+        const geometry = new THREE.ShapeGeometry(shape);
+        // Rotate to XZ plane and position
+        const mesh = new THREE.Mesh(geometry);
+        mesh.rotation.x = -Math.PI / 2; // Rotate to XZ plane
+        mesh.position.set(centerX, yPos, centerZ);
+        return mesh;
+    }
+    
+    // Helper function to create pie shape geometry in an arbitrary plane
+    function createPieShapeInPlane(center, u, v, radius, startAngle, endAngle, segments = 32) {
+        const shape = new THREE.Shape();
+        // Start at center (0, 0 in shape coordinates)
+        shape.moveTo(0, 0);
+        // Create arc from startAngle to endAngle
+        for (let i = 0; i <= segments; i++) {
+            const angle = startAngle + (endAngle - startAngle) * (i / segments);
+            const cosA = Math.cos(angle);
+            const sinA = Math.sin(angle);
+            const x = radius * cosA;
+            const y = radius * sinA;
+            shape.lineTo(x, y);
+        }
+        // Close the shape back to center
+        shape.lineTo(0, 0);
+        
+        const geometry = new THREE.ShapeGeometry(shape);
+        const mesh = new THREE.Mesh(geometry);
+        mesh.position.copy(center);
+        
+        // Create rotation matrix to align XY plane with u-v plane
+        // Normalize the basis vectors
+        const uNorm = u.clone().normalize();
+        const vNorm = v.clone().normalize();
+        const normal = new THREE.Vector3().crossVectors(uNorm, vNorm).normalize();
+        
+        // Create a rotation matrix that aligns:
+        // Local X axis (1,0,0) -> u direction
+        // Local Y axis (0,1,0) -> v direction
+        // Local Z axis (0,0,1) -> normal direction
+        // makeBasis creates a matrix with u, v, normal as columns
+        // This represents a change of basis FROM u-v-normal TO standard
+        // For rotation, we need the inverse (transpose for orthonormal)
+        const rotationMatrix = new THREE.Matrix4();
+        rotationMatrix.makeBasis(uNorm, vNorm, normal);
+        rotationMatrix.transpose(); // Transpose to get rotation FROM standard TO u-v-normal
+        // Extract rotation from the matrix and apply it
+        const quaternion = new THREE.Quaternion();
+        quaternion.setFromRotationMatrix(rotationMatrix);
+        mesh.setRotationFromQuaternion(quaternion);
+        
+        return mesh;
     }
 
     const penTopLocal = new THREE.Vector3(0, 4, 0); // barrelHeight = 4
@@ -837,6 +954,59 @@
                     fusciaArcLine.geometry = fusciaTubeGeometry;
                     fusciaArcLine.visible = true;
                     
+                    // Update pie shape for tilt altitude arc using quaternions
+                    if (fusciaPieMesh) {
+                        scene.remove(fusciaPieMesh);
+                        if (fusciaPieMesh.geometry) fusciaPieMesh.geometry.dispose();
+                    }
+                    // Create pie shape using same point generation as createCircularArcInPlane
+                    const fusciaPieShape = new THREE.Shape();
+                    fusciaPieShape.moveTo(0, 0); // Start at center
+                    const fusciaPieSegments = 32;
+                    for (let i = 0; i <= fusciaPieSegments; i++) {
+                        const angle = fusciaStartAngle + (fusciaEndAngle - fusciaStartAngle) * (i / fusciaPieSegments);
+                        const cosA = Math.cos(angle);
+                        const sinA = Math.sin(angle);
+                        fusciaPieShape.lineTo(arcRadius * cosA, arcRadius * sinA);
+                    }
+                    fusciaPieShape.lineTo(0, 0); // Close back to center
+                    const fusciaPieGeometry = new THREE.ShapeGeometry(fusciaPieShape);
+                    fusciaPieMesh = new THREE.Mesh(fusciaPieGeometry, fusciaPieMaterial);
+                    fusciaPieMesh.position.copy(arcCenter);
+                    
+                    // Use quaternions to rotate pie shape to align with fusciaU-fusciaV plane
+                    const fusciaUNorm = fusciaU.clone().normalize();
+                    const fusciaVNorm = fusciaV.clone().normalize();
+                    const fusciaNormal = new THREE.Vector3().crossVectors(fusciaUNorm, fusciaVNorm).normalize();
+                    
+                    // Create quaternion that aligns:
+                    // Local X (1,0,0) -> fusciaU
+                    // Local Y (0,1,0) -> fusciaV  
+                    // Local Z (0,0,1) -> fusciaNormal
+                    const xAxis = new THREE.Vector3(1, 0, 0);
+                    const zAxis = new THREE.Vector3(0, 0, 1);
+                    
+                    // First rotate Z to align with normal
+                    const zToNormalQuat = new THREE.Quaternion();
+                    zToNormalQuat.setFromUnitVectors(zAxis, fusciaNormal);
+                    
+                    // After this rotation, X and Y are in the plane but may not align with fusciaU and fusciaV
+                    // Rotate around normal to align X with fusciaU
+                    const xAfterZRot = xAxis.clone().applyQuaternion(zToNormalQuat);
+                    // Project onto plane
+                    const xInPlane = xAfterZRot.clone().sub(fusciaNormal.clone().multiplyScalar(xAfterZRot.dot(fusciaNormal))).normalize();
+                    // Angle to rotate around normal
+                    const angleToU = Math.acos(Math.max(-1, Math.min(1, xInPlane.dot(fusciaUNorm))));
+                    const cross = new THREE.Vector3().crossVectors(xInPlane, fusciaUNorm);
+                    const sign = cross.dot(fusciaNormal) >= 0 ? 1 : -1;
+                    const alignQuat = new THREE.Quaternion().setFromAxisAngle(fusciaNormal, sign * angleToU);
+                    
+                    // Combine: first align Z, then align X
+                    const fusciaPieRotationQuat = new THREE.Quaternion();
+                    fusciaPieRotationQuat.multiplyQuaternions(alignQuat, zToNormalQuat);
+                    fusciaPieMesh.setRotationFromQuaternion(fusciaPieRotationQuat);
+                    scene.add(fusciaPieMesh);
+                    
                     // Create dotted fuscia circle (full 360 degrees) that follows the path of the arc
                     const fusciaCircleSegments = 64; // Enough segments for a smooth circle
                     const fusciaCirclePoints = createCircularArcInPlane(arcCenter, fusciaU, fusciaV, arcRadius, 0, 2 * Math.PI, fusciaCircleSegments);
@@ -848,6 +1018,12 @@
                     fusciaVerticalLine.visible = false;
                     fusciaArcLine.visible = false;
                     fusciaSemicircleLine.visible = false;
+                    // Remove pie shape
+                    if (fusciaPieMesh) {
+                        scene.remove(fusciaPieMesh);
+                        if (fusciaPieMesh.geometry) fusciaPieMesh.geometry.dispose();
+                        fusciaPieMesh = null;
+                    }
                 }
                 
                 // Calculate and update tilt X and tilt Y values
@@ -888,6 +1064,15 @@
                     tiltXArcLine.geometry = tiltXTubeGeometry;
                     tiltXArcLine.visible = true;
                     
+                    // Update pie shape for tilt X arc
+                    if (tiltXPieMesh) {
+                        scene.remove(tiltXPieMesh);
+                        if (tiltXPieMesh.geometry) tiltXPieMesh.geometry.dispose();
+                    }
+                    tiltXPieMesh = createPieShapeInPlane(tiltXArcCenter, tiltXU, tiltXV, tiltXArcRadius, tiltXStartAngle, tiltXEndAngle, 32);
+                    tiltXPieMesh.material = tiltXPieMaterial;
+                    scene.add(tiltXPieMesh);
+                    
                     // Create dotted circle
                     const tiltXCirclePoints = createCircularArcInPlane(tiltXArcCenter, tiltXU, tiltXV, tiltXArcRadius, 0, 2 * Math.PI, 64);
                     tiltXDottedCircleGeometry.setFromPoints(tiltXCirclePoints);
@@ -898,6 +1083,12 @@
                     tiltXVerticalLine.visible = false;
                     tiltXArcLine.visible = false;
                     tiltXDottedCircleLine.visible = false;
+                    // Remove pie shape
+                    if (tiltXPieMesh) {
+                        scene.remove(tiltXPieMesh);
+                        if (tiltXPieMesh.geometry) tiltXPieMesh.geometry.dispose();
+                        tiltXPieMesh = null;
+                    }
                 }
                 
                 // Update tilt Y annotation (pink) - in YZ plane
@@ -932,6 +1123,15 @@
                     tiltYArcLine.geometry = tiltYTubeGeometry;
                     tiltYArcLine.visible = true;
                     
+                    // Update pie shape for tilt Y arc
+                    if (tiltYPieMesh) {
+                        scene.remove(tiltYPieMesh);
+                        if (tiltYPieMesh.geometry) tiltYPieMesh.geometry.dispose();
+                    }
+                    tiltYPieMesh = createPieShapeInPlane(tiltYArcCenter, tiltYU, tiltYV, tiltYArcRadius, tiltYStartAngle, tiltYEndAngle, 32);
+                    tiltYPieMesh.material = tiltYPieMaterial;
+                    scene.add(tiltYPieMesh);
+                    
                     // Create dotted circle
                     const tiltYCirclePoints = createCircularArcInPlane(tiltYArcCenter, tiltYU, tiltYV, tiltYArcRadius, 0, 2 * Math.PI, 64);
                     tiltYDottedCircleGeometry.setFromPoints(tiltYCirclePoints);
@@ -942,6 +1142,12 @@
                     tiltYVerticalLine.visible = false;
                     tiltYArcLine.visible = false;
                     tiltYDottedCircleLine.visible = false;
+                    // Remove pie shape
+                    if (tiltYPieMesh) {
+                        scene.remove(tiltYPieMesh);
+                        if (tiltYPieMesh.geometry) tiltYPieMesh.geometry.dispose();
+                        tiltYPieMesh = null;
+                    }
                 }
                 
                 penTipLinePositions[0] = penTipWorld.x;
@@ -998,15 +1204,44 @@
                 const arcCenterX = penTipLineBottom.x;
                 const arcCenterZ = penTipLineBottom.z;
                 
-                // Arc starts at 90° (pointing in +Z direction) and extends by azimuth angle (reversed direction)
-                const startAngle = Math.PI / 2; // 90 degrees to the right
-                const endAngle = Math.PI / 2 - (azimuth * Math.PI) / 180; // Start at 90° and extend by azimuth (reversed)
+                // Calculate the angle of the surface line direction (from center towards penLineBottom)
+                // This is where the arc and pie should end
+                let surfaceLineAngle = Math.PI / 2; // Default to 90° if length is too small
+                if (length > 0.001) {
+                    // Angle in XZ plane: atan2 gives angle from +X axis
+                    // The surface line goes from center towards penLineBottom
+                    surfaceLineAngle = Math.atan2(dz, dx);
+                }
+                
+                // Arc starts at a fixed angle and grows counter-clockwise as azimuth increases
+                const startAngle = Math.PI / 2 - Math.PI; // Fixed at -90° (180 degrees earlier)
+                const endAngle = startAngle + (azimuth * Math.PI) / 180; // Grows counter-clockwise (increasing angle) as azimuth increases
                 const arcLength = Math.abs(azimuth);
                 const arcSegments = Math.max(8, Math.floor(arcLength / 5)); // More segments for larger arcs
                 
-                // Show circle always (same visibility as surface line)
+                // Show circle always (same visibility as surface line) - using quaternions
                 const dottedCircleSegments = 64; // Enough segments for a smooth circle
-                const dottedCirclePoints = createArcPoints(arcCenterX, arcCenterZ, arcRadius, 0, 2 * Math.PI, dottedCircleSegments);
+                const azimuthArcCenter = new THREE.Vector3(arcCenterX, yOffset, arcCenterZ);
+                const dottedCirclePoints = [];
+                
+                // Use quaternion to rotate from XY to XZ plane
+                const xzPlaneQuat = new THREE.Quaternion();
+                xzPlaneQuat.setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
+                
+                // Create full circle points in local XY plane, then transform to XZ plane
+                for (let i = 0; i <= dottedCircleSegments; i++) {
+                    const angle = (2 * Math.PI * i) / dottedCircleSegments;
+                    const cosA = Math.cos(angle);
+                    const sinA = Math.sin(angle);
+                    // Point in local XY plane
+                    const localPoint = new THREE.Vector3(arcRadius * cosA, arcRadius * sinA, 0);
+                    // Transform to XZ plane using quaternion
+                    const worldPoint = localPoint.clone().applyQuaternion(xzPlaneQuat);
+                    // Translate to arc center
+                    worldPoint.add(azimuthArcCenter);
+                    dottedCirclePoints.push(worldPoint);
+                }
+                
                 dottedArcGeometry.setFromPoints(dottedCirclePoints);
                 dottedArcGeometry.attributes.position.needsUpdate = true;
                 dottedArcLine.computeLineDistances(); // Required for dashed lines
@@ -1014,7 +1249,32 @@
                 
                 // Show arc if azimuth is significant
                 if (arcLength > 0.1) {
-                    const arcPoints = createArcPoints(arcCenterX, arcCenterZ, arcRadius, startAngle, endAngle, arcSegments);
+                    // Create arc points using quaternions
+                    // Arc is in XZ plane (tablet surface), so we create points in XY plane and rotate to XZ
+                    const azimuthArcCenter = new THREE.Vector3(arcCenterX, yOffset, arcCenterZ);
+                    const arcPoints = [];
+                    
+                    // Define the plane: XZ plane (Y-up is normal, X and Z are the basis vectors)
+                    // Create quaternion that rotates from XY plane (Z-up) to XZ plane (Y-up)
+                    // This is a -90° rotation around X axis
+                    const xzPlaneQuat = new THREE.Quaternion();
+                    xzPlaneQuat.setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
+                    
+                    // Create points in local XY plane, then transform to XZ plane using quaternion
+                    // Swap start and end angles to grow in opposite direction
+                    for (let i = 0; i <= arcSegments; i++) {
+                        const angle = endAngle + (startAngle - endAngle) * (i / arcSegments);
+                        const cosA = Math.cos(angle);
+                        const sinA = Math.sin(angle);
+                        // Point in local XY plane
+                        const localPoint = new THREE.Vector3(arcRadius * cosA, arcRadius * sinA, 0);
+                        // Transform to XZ plane using quaternion
+                        const worldPoint = localPoint.clone().applyQuaternion(xzPlaneQuat);
+                        // Translate to arc center
+                        worldPoint.add(azimuthArcCenter);
+                        arcPoints.push(worldPoint);
+                    }
+                    
                     // Create a curve from the points
                     const arcCurve = createCurveFromPoints(arcPoints);
                     // Create a tube geometry along the curve
@@ -1026,6 +1286,35 @@
                     arcLine.geometry = tubeGeometry;
                     arcLine.visible = true;
                     
+                    // Update pie shape for azimuth arc using quaternions (starts 180 degrees earlier)
+                    if (arcPieMesh) {
+                        arcAnnotationGroup.remove(arcPieMesh);
+                        if (arcPieMesh.geometry) arcPieMesh.geometry.dispose();
+                    }
+                    // Create pie shape starting at same angle as arc, growing clockwise together
+                    // Pie shape is created in XY plane, then rotated to XZ plane using same quaternion as arc
+                    // Use same angles as arc so pie grows clockwise with the arc
+                    const pieStartAngle = startAngle;
+                    const pieEndAngle = endAngle;
+                    const azimuthPieShape = new THREE.Shape();
+                    azimuthPieShape.moveTo(0, 0); // Start at center
+                    // Use same number of segments and angle calculation as arc
+                    for (let i = 0; i <= arcSegments; i++) {
+                        const angle = pieStartAngle + (pieEndAngle - pieStartAngle) * (i / arcSegments);
+                        const x = arcRadius * Math.cos(angle);
+                        const z = arcRadius * Math.sin(angle);
+                        azimuthPieShape.lineTo(x, z);
+                    }
+                    azimuthPieShape.lineTo(0, 0); // Close back to center
+                    const azimuthPieGeometry = new THREE.ShapeGeometry(azimuthPieShape);
+                    arcPieMesh = new THREE.Mesh(azimuthPieGeometry, arcPieMaterial);
+                    arcPieMesh.position.set(arcCenterX, yOffset, arcCenterZ);
+                    
+                    // Use same quaternion as arc to rotate pie shape to XZ plane (tablet surface)
+                    // This is the same xzPlaneQuat used for the arc points
+                    arcPieMesh.setRotationFromQuaternion(xzPlaneQuat);
+                    arcAnnotationGroup.add(arcPieMesh);
+                    
                     // Update arrow at end of arc (arrowheads removed)
                     const arrowPoints = createArrow(arcCenterX, arcCenterZ, arcRadius, endAngle);
                     arrowGeometry.setFromPoints(arrowPoints);
@@ -1034,6 +1323,12 @@
                 } else {
                     // arrowLine.visible = false; // Arrowheads removed
                     arcLine.visible = false;
+                    // Remove pie shape
+                    if (arcPieMesh) {
+                        arcAnnotationGroup.remove(arcPieMesh);
+                        if (arcPieMesh.geometry) arcPieMesh.geometry.dispose();
+                        arcPieMesh = null;
+                    }
                 }
                 
                 // Update barrel rotation annotations (centered on top of pen, perpendicular to pen axis)
@@ -1076,6 +1371,75 @@
                         barrelArcLine.geometry = barrelTubeGeometry;
                         barrelArcLine.visible = true;
                         
+                        // Update pie shape for barrel rotation arc (grow with arc, starting 180 deg earlier)
+                        if (barrelPieMesh) {
+                            barrelAnnotationGroup.remove(barrelPieMesh);
+                            if (barrelPieMesh.geometry) barrelPieMesh.geometry.dispose();
+                        }
+                        // Create pie shape using exact same calculation as arc but starting 180 degrees earlier
+                        // Arc: from barrelStartAngle to barrelEndAngle
+                        // Pie: starts 180 degrees before current position (barrelStartAngle - 2*Math.PI, which wraps to same as barrelStartAngle - 0)
+                        // Actually, to start 180 degrees earlier than current, subtract another Math.PI
+                        const pieStartAngle = (barrelStartAngle - Math.PI) - Math.PI;
+                        const pieEndAngle = (barrelEndAngle - Math.PI) - Math.PI;
+                        // Create shape using same point generation as createBarrelArcPoints
+                        const pieShape = new THREE.Shape();
+                        pieShape.moveTo(0, 0); // Start at center
+                        const pieSegments = 32;
+                        for (let i = 0; i <= pieSegments; i++) {
+                            const angle = pieStartAngle + (pieEndAngle - pieStartAngle) * (i / pieSegments);
+                            const cosA = Math.cos(angle);
+                            const sinA = Math.sin(angle);
+                            // Use same formula as createBarrelArcPoints: radius * (cos * u + sin * v)
+                            // But in shape coordinates, this becomes (radius * cos, radius * sin)
+                            pieShape.lineTo(barrelArcRadius * cosA, barrelArcRadius * sinA);
+                        }
+                        pieShape.lineTo(0, 0); // Close back to center
+                        const pieGeometry = new THREE.ShapeGeometry(pieShape);
+                        barrelPieMesh = new THREE.Mesh(pieGeometry, barrelPieMaterial);
+                        barrelPieMesh.position.copy(barrelCenter);
+                        // Use quaternions to rotate pie shape to align with u-v plane
+                        // Pie shape is created in XY plane where:
+                        //   - Local X (1,0,0) should align with u
+                        //   - Local Y (0,1,0) should align with v
+                        //   - Local Z (0,0,1) should align with normal (pen axis direction)
+                        // The orientationQuat already transforms pen's local axes to world
+                        // We need to rotate from XY plane (Z-up) to the u-v plane
+                        const uNorm = u.clone().normalize();
+                        const vNorm = v.clone().normalize();
+                        const normal = new THREE.Vector3().crossVectors(uNorm, vNorm).normalize();
+                        
+                        // Create quaternion that aligns:
+                        // Local X (1,0,0) -> u
+                        // Local Y (0,1,0) -> v  
+                        // Local Z (0,0,1) -> normal
+                        // This is equivalent to the orientationQuat but for the pie's coordinate system
+                        // We can construct it by rotating from standard basis to u-v-normal basis
+                        const xAxis = new THREE.Vector3(1, 0, 0);
+                        const yAxis = new THREE.Vector3(0, 1, 0);
+                        const zAxis = new THREE.Vector3(0, 0, 1);
+                        
+                        // First rotate Z to align with normal
+                        const zToNormalQuat = new THREE.Quaternion();
+                        zToNormalQuat.setFromUnitVectors(zAxis, normal);
+                        
+                        // After this rotation, X and Y are in the plane but may not align with u and v
+                        // Rotate around normal to align X with u
+                        const xAfterZRot = xAxis.clone().applyQuaternion(zToNormalQuat);
+                        // Project onto plane
+                        const xInPlane = xAfterZRot.clone().sub(normal.clone().multiplyScalar(xAfterZRot.dot(normal))).normalize();
+                        // Angle to rotate around normal
+                        const angleToU = Math.acos(Math.max(-1, Math.min(1, xInPlane.dot(uNorm))));
+                        const cross = new THREE.Vector3().crossVectors(xInPlane, uNorm);
+                        const sign = cross.dot(normal) >= 0 ? 1 : -1;
+                        const alignQuat = new THREE.Quaternion().setFromAxisAngle(normal, sign * angleToU);
+                        
+                        // Combine: first align Z, then align X
+                        const pieRotationQuat = new THREE.Quaternion();
+                        pieRotationQuat.multiplyQuaternions(alignQuat, zToNormalQuat);
+                        barrelPieMesh.setRotationFromQuaternion(pieRotationQuat);
+                        barrelAnnotationGroup.add(barrelPieMesh);
+                        
                         // Update arrow at end of barrel arc (arrowheads removed)
                         const barrelArrowPoints = createBarrelArrow(barrelCenter, penAxis, u, v, barrelArcRadius, barrelEndAngle);
                         barrelArrowGeometry.setFromPoints(barrelArrowPoints);
@@ -1084,6 +1448,12 @@
                     } else {
                         // barrelArrowLine.visible = false; // Arrowheads removed
                         barrelArcLine.visible = false;
+                        // Remove pie shape
+                        if (barrelPieMesh) {
+                            barrelAnnotationGroup.remove(barrelPieMesh);
+                            if (barrelPieMesh.geometry) barrelPieMesh.geometry.dispose();
+                            barrelPieMesh = null;
+                        }
                     }
                     
                     // Create dotted circle (full 360°) in the plane perpendicular to pen axis
@@ -1124,6 +1494,12 @@
                     barrelDottedCircleLine.visible = false;
                     barrelSurfaceLine.visible = false;
                     barrelSurfaceArrowLine.visible = false;
+                    // Remove pie shape
+                    if (barrelPieMesh) {
+                        barrelAnnotationGroup.remove(barrelPieMesh);
+                        if (barrelPieMesh.geometry) barrelPieMesh.geometry.dispose();
+                        barrelPieMesh = null;
+                    }
                 }
             }
 
