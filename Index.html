@@ -1123,13 +1123,57 @@
                     tiltYArcLine.geometry = tiltYTubeGeometry;
                     tiltYArcLine.visible = true;
                     
-                    // Update pie shape for tilt Y arc
+                    // Update pie shape for tilt Y arc using quaternions
                     if (tiltYPieMesh) {
                         scene.remove(tiltYPieMesh);
                         if (tiltYPieMesh.geometry) tiltYPieMesh.geometry.dispose();
                     }
-                    tiltYPieMesh = createPieShapeInPlane(tiltYArcCenter, tiltYU, tiltYV, tiltYArcRadius, tiltYStartAngle, tiltYEndAngle, 32);
-                    tiltYPieMesh.material = tiltYPieMaterial;
+                    // Create pie shape using same point generation as createCircularArcInPlane
+                    const tiltYPieShape = new THREE.Shape();
+                    tiltYPieShape.moveTo(0, 0); // Start at center
+                    const tiltYPieSegments = 32;
+                    for (let i = 0; i <= tiltYPieSegments; i++) {
+                        const angle = tiltYStartAngle + (tiltYEndAngle - tiltYStartAngle) * (i / tiltYPieSegments);
+                        const cosA = Math.cos(angle);
+                        const sinA = Math.sin(angle);
+                        tiltYPieShape.lineTo(tiltYArcRadius * cosA, tiltYArcRadius * sinA);
+                    }
+                    tiltYPieShape.lineTo(0, 0); // Close back to center
+                    const tiltYPieGeometry = new THREE.ShapeGeometry(tiltYPieShape);
+                    tiltYPieMesh = new THREE.Mesh(tiltYPieGeometry, tiltYPieMaterial);
+                    tiltYPieMesh.position.copy(tiltYArcCenter);
+                    
+                    // Use quaternions to rotate pie shape to align with tiltYU-tiltYV plane
+                    const tiltYUNorm = tiltYU.clone().normalize();
+                    const tiltYVNorm = tiltYV.clone().normalize();
+                    const tiltYNormal = new THREE.Vector3().crossVectors(tiltYUNorm, tiltYVNorm).normalize();
+                    
+                    // Create quaternion that aligns:
+                    // Local X (1,0,0) -> tiltYU
+                    // Local Y (0,1,0) -> tiltYV  
+                    // Local Z (0,0,1) -> tiltYNormal
+                    const xAxis = new THREE.Vector3(1, 0, 0);
+                    const zAxis = new THREE.Vector3(0, 0, 1);
+                    
+                    // First rotate Z to align with normal
+                    const zToNormalQuat = new THREE.Quaternion();
+                    zToNormalQuat.setFromUnitVectors(zAxis, tiltYNormal);
+                    
+                    // After this rotation, X and Y are in the plane but may not align with tiltYU and tiltYV
+                    // Rotate around normal to align X with tiltYU
+                    const xAfterZRot = xAxis.clone().applyQuaternion(zToNormalQuat);
+                    // Project onto plane
+                    const xInPlane = xAfterZRot.clone().sub(tiltYNormal.clone().multiplyScalar(xAfterZRot.dot(tiltYNormal))).normalize();
+                    // Angle to rotate around normal
+                    const angleToU = Math.acos(Math.max(-1, Math.min(1, xInPlane.dot(tiltYUNorm))));
+                    const cross = new THREE.Vector3().crossVectors(xInPlane, tiltYUNorm);
+                    const sign = cross.dot(tiltYNormal) >= 0 ? 1 : -1;
+                    const alignQuat = new THREE.Quaternion().setFromAxisAngle(tiltYNormal, sign * angleToU);
+                    
+                    // Combine: first align Z, then align X
+                    const tiltYPieRotationQuat = new THREE.Quaternion();
+                    tiltYPieRotationQuat.multiplyQuaternions(alignQuat, zToNormalQuat);
+                    tiltYPieMesh.setRotationFromQuaternion(tiltYPieRotationQuat);
                     scene.add(tiltYPieMesh);
                     
                     // Create dotted circle
