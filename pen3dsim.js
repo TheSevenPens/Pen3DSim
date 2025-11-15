@@ -1446,17 +1446,27 @@ class Pen3DSim {
         start = ((start % 360) + 360) % 360;
         end = ((end % 360) + 360) % 360;
         
-        // Find shortest path
+        // Calculate difference
         let diff = end - start;
-        if (Math.abs(diff) > 180) {
-            if (diff > 0) {
-                diff -= 360;
-            } else {
-                diff += 360;
-            }
+        
+        // Always go forward (increasing angle) if end > start
+        // Only wrap if going forward would be more than 360 degrees
+        if (diff < 0) {
+            // end < start, so we need to wrap forward
+            diff += 360;
+        }
+        // If diff > 0 and < 360, just use it as is (forward direction)
+        // If diff >= 360, that shouldn't happen with normalized angles, but handle it
+        if (diff >= 360) {
+            diff = diff % 360;
         }
         
-        return start + diff * t;
+        let result = start + diff * t;
+        
+        // Normalize result to 0-360 range
+        result = ((result % 360) + 360) % 360;
+        
+        return result;
     }
 }
 
