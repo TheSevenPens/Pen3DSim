@@ -52,7 +52,7 @@ input[type="range"] {
     margin-bottom: 0;
 }
 
-#export-btn, #reset-btn {
+#export-btn, #reset-btn, #demo-btn, #anim-btn {
     padding: 6px 6px;
     background: #4CAF50;
     color: white;
@@ -64,11 +64,11 @@ input[type="range"] {
     transition: background 0.3s;
 }
 
-#export-btn:hover, #reset-btn:hover {
+#export-btn:hover, #reset-btn:hover, #demo-btn:hover, #anim-btn:hover {
     background: #45a049;
 }
 
-#export-btn:active, #reset-btn:active {
+#export-btn:active, #reset-btn:active, #demo-btn:active, #anim-btn:active {
     background: #3d8b40;
 }
 

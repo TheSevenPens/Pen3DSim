@@ -98,6 +98,8 @@
 
 
     <button id="reset-btn">Reset pen</button>
+    <button id="demo-btn">Demo</button>
+    <button id="anim-btn">Anim</button>
     <button id="export-btn">Export as PNG</button>
 </div>
 <div id="viewer">
@@ -105,1451 +107,13 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="pen3dsim.js"></script>
 <script>
-    // Scene setup
+    // Initialize Pen3DSim
     const viewer = document.getElementById('viewer');
-    const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x1a1a1a);
-
-    // Cameras
-    const cameraAspectRatio = viewer.clientWidth / viewer.clientHeight;
-    const cameraNear = 0.1;
-    const cameraFar = 1000;
+    const sim = new Pen3DSim(viewer);
     
-    // Perspective camera
-    const perspectiveCamera = new THREE.PerspectiveCamera(
-        30,
-        cameraAspectRatio,
-        cameraNear,
-        cameraFar
-    );
-    perspectiveCamera.position.set(0, 15, 25);
-    perspectiveCamera.lookAt(0, 0, 0);
-    
-    // Orthographic camera (axonometric)
-    const orthoSize = 20;
-    const orthographicCamera = new THREE.OrthographicCamera(
-        -orthoSize * cameraAspectRatio,
-        orthoSize * cameraAspectRatio,
-        orthoSize,
-        -orthoSize,
-        cameraNear,
-        cameraFar
-    );
-    orthographicCamera.position.set(0, 15, 25);
-    orthographicCamera.lookAt(0, 0, 0);
-    
-    // Active camera (starts with perspective)
-    let camera = perspectiveCamera;
-
-    // Renderer
-    const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
-    renderer.setSize(viewer.clientWidth, viewer.clientHeight);
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    viewer.appendChild(renderer.domElement);
-
-    // Orbit Controls for camera
-    const controls = new THREE.OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.05;
-    controls.screenSpacePanning = false;
-    controls.minDistance = 1;
-    controls.maxDistance = 100;
-    controls.maxPolarAngle = Math.PI / 2;
-
-    // Lighting
-    const ambientLightColor = 0xffffff;
-    const directionalLightColor = 0xffffff;
-    const pointLightColor = 0xffffff;
-
-    const ambientLight = new THREE.AmbientLight( ambientLightColor, 0.5);
-    scene.add(ambientLight);
-
-    const directionalLight = new THREE.DirectionalLight(directionalLightColor, 0.8);
-    directionalLight.position.set(0, 20, 0);
-    directionalLight.castShadow = true;
-    directionalLight.shadow.mapSize.width = 2048;
-    directionalLight.shadow.mapSize.height = 2048;
-    // Configure shadow camera frustum to cover the entire area where pen can move
-    // Tablet is 16" wide, pen can move with offset X from -8 to +8, plus margin
-    directionalLight.shadow.camera.left = -15;
-    directionalLight.shadow.camera.right = 15;
-    directionalLight.shadow.camera.top = 15;
-    directionalLight.shadow.camera.bottom = -15;
-    directionalLight.shadow.camera.near = 0.1;
-    directionalLight.shadow.camera.far = 50;
-    scene.add(directionalLight);
-
-    const pointLight = new THREE.PointLight(pointLightColor, 0.3);
-    pointLight.position.set(-10, 10, -10);
-    scene.add(pointLight);
-
-    // Create the tablet (16" x 9" x 0.5")
-
-    const geometry = new THREE.BoxGeometry(16, 0.1, 9);
-    const material = new THREE.MeshStandardMaterial({
-        color: 0x505050,
-        roughness: 0.7,
-        metalness: 0.2
-    });
-    const tablet = new THREE.Mesh(geometry, material);
-    tablet.castShadow = true;
-    tablet.receiveShadow = true;
-    scene.add(tablet);
-
-    // Add wireframe to tablet
-    const wireframe = new THREE.LineSegments(
-        new THREE.EdgesGeometry(geometry),
-        new THREE.LineBasicMaterial({ color: 0x808080, linewidth: 1 })
-    );
-    tablet.add(wireframe);
-
-    // Add grid lines on tablet surface (0.5 inch intervals)
-    const gridGroup = new THREE.Group();
-    const gridMaterial = new THREE.LineBasicMaterial({ color: 0x5a5a5a, linewidth: 1 });
-
-    const tabletWidth = 16; // inches
-    const tabletDepth = 9; // inches
-    const gridSpacing = 0.5; // inches
-    const yOffset = 0.051; // slightly above tablet surface to prevent z-fighting
-
-    // Create vertical lines (parallel to Z axis)
-    for (let x = -tabletWidth / 2; x <= tabletWidth / 2; x += gridSpacing) {
-        const points = [];
-        points.push(new THREE.Vector3(x, yOffset, -tabletDepth / 2));
-        points.push(new THREE.Vector3(x, yOffset, tabletDepth / 2));
-        const lineGeometry = new THREE.BufferGeometry().setFromPoints(points);
-        const line = new THREE.Line(lineGeometry, gridMaterial);
-        gridGroup.add(line);
-    }
-
-    // Create horizontal lines (parallel to X axis)
-    for (let z = -tabletDepth / 2; z <= tabletDepth / 2; z += gridSpacing) {
-        const points = [];
-        points.push(new THREE.Vector3(-tabletWidth / 2, yOffset, z));
-        points.push(new THREE.Vector3(tabletWidth / 2, yOffset, z));
-        const lineGeometry = new THREE.BufferGeometry().setFromPoints(points);
-        const line = new THREE.Line(lineGeometry, gridMaterial);
-        gridGroup.add(line);
-    }
-
-    scene.add(gridGroup);
-
-    // Create the digital pen
-    const penGroup = new THREE.Group();
-
-    // Create checkerboard texture for pen
-    function createCheckerboardTexture() {
-        const canvas = document.createElement('canvas');
-        canvas.width = 512;
-        canvas.height = 512;
-        const context = canvas.getContext('2d');
-        
-        const checkSize = 256; // Larger checker squares
-        const checksX = canvas.width / checkSize;
-        const checksY = canvas.height / checkSize;
-
-        const checkColor1 = '#ee66dd';
-        const checkColor2 = '#aa33bb';
-        for (let y = 0; y < checksY; y++) {
-            for (let x = 0; x < checksX; x++) {
-                const isEven = (x + y) % 2 === 0;
-                context.fillStyle = isEven ? checkColor1 : checkColor2;
-                context.fillRect(x * checkSize, y * checkSize, checkSize, checkSize);
-            }
-        }
-        
-        const texture = new THREE.CanvasTexture(canvas);
-        texture.magFilter = THREE.NearestFilter;
-        texture.minFilter = THREE.NearestFilter;
-        return texture;
-    }
-
-    const checkerboardTexture = createCheckerboardTexture();
-    checkerboardTexture.wrapS = THREE.RepeatWrapping;
-    checkerboardTexture.wrapT = THREE.RepeatWrapping;
-
-    // Pen tip (cone)
-    const tipHeight = 0.5;
-    const tipGeometry = new THREE.ConeGeometry(0.1, tipHeight, 16);
-    const tipTexture = checkerboardTexture.clone();
-    tipTexture.needsUpdate = true;
-    tipTexture.repeat.set(2, 1);
-        
-    const tipMaterial = new THREE.MeshStandardMaterial({
-        map: tipTexture,
-        roughness: 0.8,
-        metalness: 0.1
-    });
-    const penTip = new THREE.Mesh(tipGeometry, tipMaterial);
-    penTip.castShadow = true;
-    penTip.rotation.x = Math.PI;
-    penTip.position.y = -tipHeight / 2;
-    penGroup.add(penTip);
-
-    // Pen barrel (cylinder)
-    const barrelHeight = 4;
-    const barrelGeometry = new THREE.CylinderGeometry(0.15, 0.15, barrelHeight, 16);
-    const barrelTexture = checkerboardTexture.clone();
-    barrelTexture.needsUpdate = true;
-    barrelTexture.repeat.set(2, 2);
-        
-    const barrelMaterial = new THREE.MeshStandardMaterial({
-        map: barrelTexture,
-        roughness: 0.8,
-        metalness: 0.1
-    });
-    const penBarrel = new THREE.Mesh(barrelGeometry, barrelMaterial);
-    penBarrel.castShadow = true;
-    penBarrel.position.y = barrelHeight / 2;
-    penGroup.add(penBarrel);
-
-    // Position the pen above the tablet
-    penGroup.position.set(0, 0, 0);
-    scene.add(penGroup);
-
-    // Line from top of pen to tablet surface
-    const penLinePositions = new Float32Array(6);
-    const penLineGeometry = new THREE.BufferGeometry();
-    penLineGeometry.setAttribute('position', new THREE.BufferAttribute(penLinePositions, 3));
-
-    const penLineMaterial = new THREE.LineDashedMaterial({
-        color: 0xffff00,
-        dashSize: 0.2,
-        gapSize: 0.1
-    });
-    const penLine = new THREE.Line(penLineGeometry, penLineMaterial);
-    scene.add(penLine);
-
-    // Line from pen tip to tablet surface
-    const penTipLinePositions = new Float32Array(6);
-    const penTipLineGeometry = new THREE.BufferGeometry();
-    penTipLineGeometry.setAttribute('position', new THREE.BufferAttribute(penTipLinePositions, 3));
-
-    const penTipLineMaterial = new THREE.LineDashedMaterial({
-        color: 0xffff00,
-        dashSize: 0.2,
-        gapSize: 0.1
-    });
-    const penTipLine = new THREE.Line(penTipLineGeometry, penTipLineMaterial);
-    scene.add(penTipLine);
-
-    // Arc annotation on tablet surface
-    const arcAnnotationGroup = new THREE.Group();
-    const arcRadius = 1.5; // inches
-    const arcMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-    const arcThickness = 0.02; // Thickness of the arc tube in inches
-    
-    // Create arc curve
-    function createArcPoints(centerX, centerZ, radius, startAngle, endAngle, segments) {
-        const points = [];
-        for (let i = 0; i <= segments; i++) {
-            const angle = startAngle + (endAngle - startAngle) * (i / segments);
-            const x = centerX + radius * Math.cos(angle);
-            const z = centerZ + radius * Math.sin(angle);
-            points.push(new THREE.Vector3(x, yOffset, z));
-        }
-        return points;
-    }
-    
-    // Create curve from points for TubeGeometry
-    function createCurveFromPoints(points) {
-        const curve = new THREE.CatmullRomCurve3(points);
-        return curve;
-    }
-    
-    // Create arrow at end of arc
-    function createArrow(centerX, centerZ, radius, angle) {
-        const arrowHeadLength = 0.3;
-        const arrowWidth = 0.15;
-        
-        const endX = centerX + radius * Math.cos(angle);
-        const endZ = centerZ + radius * Math.sin(angle);
-        
-        // Arrow direction (tangent to arc at end point, pointing in direction arc is growing)
-        // Since arc direction is reversed, negate the tangent direction
-        const dirX = Math.sin(angle); // Negated from -Math.sin(angle)
-        const dirZ = -Math.cos(angle); // Negated from Math.cos(angle)
-        
-        // Perpendicular direction for arrow head width
-        const perpX = Math.cos(angle);
-        const perpZ = Math.sin(angle);
-        
-        // Arrow points: tip at end of arc, then two points forming the arrow head
-        const arrowPoints = [
-            new THREE.Vector3(endX, yOffset, endZ), // Tip
-            new THREE.Vector3(
-                endX - arrowHeadLength * dirX - arrowWidth * perpX,
-                yOffset,
-                endZ - arrowHeadLength * dirZ - arrowWidth * perpZ
-            ),
-            new THREE.Vector3(
-                endX - arrowHeadLength * dirX + arrowWidth * perpX,
-                yOffset,
-                endZ - arrowHeadLength * dirZ + arrowWidth * perpZ
-            ),
-            new THREE.Vector3(endX, yOffset, endZ) // Back to tip
-        ];
-        
-        return arrowPoints;
-    }
-    
-    // Create arc as a tube (thick line) instead of a thin line
-    const arcGeometry = new THREE.BufferGeometry();
-    const arcLine = new THREE.Mesh(arcGeometry, arcMaterial);
-    arcAnnotationGroup.add(arcLine);
-    
-    const arrowMaterial = new THREE.LineBasicMaterial({ color: 0x00ff00, linewidth: 2 });
-    const arrowGeometry = new THREE.BufferGeometry();
-    const arrowLine = new THREE.Line(arrowGeometry, arrowMaterial);
-    arrowLine.visible = false; // Arrowheads removed
-    arcAnnotationGroup.add(arrowLine);
-    
-    // Dotted arc to complete the remaining part of the circle
-    const dottedArcMaterial = new THREE.LineDashedMaterial({ 
-        color: 0x00ff00, 
-        dashSize: 0.1, 
-        gapSize: 0.1,
-        linewidth: 2 
-    });
-    const dottedArcGeometry = new THREE.BufferGeometry();
-    const dottedArcLine = new THREE.Line(dottedArcGeometry, dottedArcMaterial);
-    arcAnnotationGroup.add(dottedArcLine);
-    
-    // Pie shape for azimuth arc (green with transparency)
-    const arcPieMaterial = new THREE.MeshBasicMaterial({ 
-        color: 0x00ff00, 
-        transparent: true, 
-        opacity: 0.3,
-        side: THREE.DoubleSide
-    });
-    let arcPieMesh = null;
-    
-    scene.add(arcAnnotationGroup);
-
-    // Line on tablet surface from tip projection to top projection
-    const surfaceLineGeometry = new THREE.BufferGeometry();
-    const surfaceLineMaterial = new THREE.LineBasicMaterial({ color: 0x00ff00, linewidth: 2 });
-    const surfaceLine = new THREE.Line(surfaceLineGeometry, surfaceLineMaterial);
-    scene.add(surfaceLine);
-    
-    // Arrow at end of surface line
-    const surfaceArrowGeometry = new THREE.BufferGeometry();
-    const surfaceArrowLine = new THREE.Line(surfaceArrowGeometry, surfaceLineMaterial);
-    surfaceArrowLine.visible = false; // Arrowheads removed
-    scene.add(surfaceArrowLine);
-    
-    // Helper function to create arrow on surface
-    function createSurfaceArrow(startX, startZ, endX, endZ) {
-        const arrowHeadLength = 0.3;
-        const arrowWidth = 0.15;
-        
-        // Direction vector from start to end
-        const dx = endX - startX;
-        const dz = endZ - startZ;
-        const length = Math.sqrt(dx * dx + dz * dz);
-        
-        if (length < 0.001) {
-            return []; // Too short, no arrow
-        }
-        
-        // Normalize direction
-        const dirX = dx / length;
-        const dirZ = dz / length;
-        
-        // Perpendicular direction for arrow head width
-        const perpX = -dirZ;
-        const perpZ = dirX;
-        
-        // Arrow points: tip at end, then two points forming the arrow head
-        const arrowPoints = [
-            new THREE.Vector3(endX, yOffset, endZ), // Tip
-            new THREE.Vector3(
-                endX - arrowHeadLength * dirX - arrowWidth * perpX,
-                yOffset,
-                endZ - arrowHeadLength * dirZ - arrowWidth * perpZ
-            ),
-            new THREE.Vector3(
-                endX - arrowHeadLength * dirX + arrowWidth * perpX,
-                yOffset,
-                endZ - arrowHeadLength * dirZ + arrowWidth * perpZ
-            ),
-            new THREE.Vector3(endX, yOffset, endZ) // Back to tip
-        ];
-        
-        return arrowPoints;
-    }
-
-    // Barrel rotation annotations (centered on top of pen)
-    const barrelAnnotationGroup = new THREE.Group();
-    const barrelArcRadius = 1.5; // inches
-    const barrelArcThickness = 0.02; // Thickness of the barrel arc tube in inches
-    const barrelAnnotationMaterial = new THREE.MeshBasicMaterial({ color: 0xff8800 });
-    const barrelArrowMaterial = new THREE.LineBasicMaterial({ color: 0xff8800, linewidth: 2 });
-    
-    // Create arc points in plane perpendicular to pen axis
-    function createBarrelArcPoints(center, axis, u, v, radius, startAngle, endAngle, segments) {
-        const points = [];
-        for (let i = 0; i <= segments; i++) {
-            const angle = startAngle + (endAngle - startAngle) * (i / segments);
-            const cosA = Math.cos(angle);
-            const sinA = Math.sin(angle);
-            // Point in the perpendicular plane
-            const point = center.clone().add(
-                u.clone().multiplyScalar(radius * cosA)
-            ).add(
-                v.clone().multiplyScalar(radius * sinA)
-            );
-            points.push(point);
-        }
-        return points;
-    }
-    
-    // Create arrow in plane perpendicular to pen axis
-    function createBarrelArrow(center, axis, u, v, radius, angle) {
-        const arrowHeadLength = 0.3;
-        const arrowWidth = 0.15;
-        
-        const cosA = Math.cos(angle);
-        const sinA = Math.sin(angle);
-        const endPoint = center.clone().add(
-            u.clone().multiplyScalar(radius * cosA)
-        ).add(
-            v.clone().multiplyScalar(radius * sinA)
-        );
-        
-        // Tangent direction in the plane (reversed to point opposite direction)
-        const tangent = u.clone().multiplyScalar(sinA).add(v.clone().multiplyScalar(-cosA));
-        tangent.normalize();
-        
-        // Perpendicular direction in the plane for arrow head width
-        const perp = u.clone().multiplyScalar(cosA).add(v.clone().multiplyScalar(sinA));
-        perp.normalize();
-        
-        // Arrow points: tip at end of arc, then two points forming the arrow head
-        const arrowPoints = [
-            endPoint.clone(), // Tip
-            endPoint.clone().add(tangent.clone().multiplyScalar(-arrowHeadLength)).add(perp.clone().multiplyScalar(-arrowWidth)),
-            endPoint.clone().add(tangent.clone().multiplyScalar(-arrowHeadLength)).add(perp.clone().multiplyScalar(arrowWidth)),
-            endPoint.clone() // Back to tip
-        ];
-        
-        return arrowPoints;
-    }
-    
-    // Create line arrow in plane perpendicular to pen axis
-    function createBarrelSurfaceArrow(center, direction, axis) {
-        const arrowHeadLength = 0.3;
-        const arrowWidth = 0.15;
-        
-        const length = direction.length();
-        if (length < 0.001) {
-            return []; // Too short, no arrow
-        }
-        
-        const endPoint = center.clone().add(direction);
-        const dir = direction.clone().normalize();
-        
-        // Perpendicular direction in the plane (perpendicular to both dir and axis)
-        const perp = new THREE.Vector3().crossVectors(dir, axis).normalize();
-        
-        // Arrow points: tip at end, then two points forming the arrow head
-        const arrowPoints = [
-            endPoint.clone(), // Tip
-            endPoint.clone().add(dir.clone().multiplyScalar(-arrowHeadLength)).add(perp.clone().multiplyScalar(-arrowWidth)),
-            endPoint.clone().add(dir.clone().multiplyScalar(-arrowHeadLength)).add(perp.clone().multiplyScalar(arrowWidth)),
-            endPoint.clone() // Back to tip
-        ];
-        
-        return arrowPoints;
-    }
-    
-    // Create barrel arc as a tube (thick line) instead of a thin line
-    const barrelArcGeometry = new THREE.BufferGeometry();
-    const barrelArcLine = new THREE.Mesh(barrelArcGeometry, barrelAnnotationMaterial);
-    barrelAnnotationGroup.add(barrelArcLine);
-    
-    const barrelArrowGeometry = new THREE.BufferGeometry();
-    const barrelArrowLine = new THREE.Line(barrelArrowGeometry, barrelArrowMaterial);
-    barrelArrowLine.visible = false; // Arrowheads removed
-    barrelAnnotationGroup.add(barrelArrowLine);
-    
-    // Line from center extending in barrel rotation direction
-    const barrelSurfaceLineGeometry = new THREE.BufferGeometry();
-    const barrelSurfaceLine = new THREE.Line(barrelSurfaceLineGeometry, barrelArrowMaterial);
-    barrelAnnotationGroup.add(barrelSurfaceLine);
-    
-    const barrelSurfaceArrowGeometry = new THREE.BufferGeometry();
-    const barrelSurfaceArrowLine = new THREE.Line(barrelSurfaceArrowGeometry, barrelArrowMaterial);
-    barrelSurfaceArrowLine.visible = false; // Arrowheads removed
-    barrelAnnotationGroup.add(barrelSurfaceArrowLine);
-    
-    // Dotted circle for barrel rotation annotations
-    const barrelDottedCircleMaterial = new THREE.LineDashedMaterial({ 
-        color: 0xff8800, 
-        dashSize: 0.1, 
-        gapSize: 0.1,
-        linewidth: 2 
-    });
-    const barrelDottedCircleGeometry = new THREE.BufferGeometry();
-    const barrelDottedCircleLine = new THREE.Line(barrelDottedCircleGeometry, barrelDottedCircleMaterial);
-    barrelAnnotationGroup.add(barrelDottedCircleLine);
-    
-    // Pie shape for barrel rotation arc (orange with transparency)
-    const barrelPieMaterial = new THREE.MeshBasicMaterial({ 
-        color: 0xff8800, 
-        transparent: true, 
-        opacity: 0.3,
-        side: THREE.DoubleSide
-    });
-    let barrelPieMesh = null;
-    
-    scene.add(barrelAnnotationGroup);
-
-    // Fuscia arc from 2 inches above tip to pen body
-    const fusciaArcThickness = 0.02; // Thickness of the fuscia arc tube in inches
-    const fusciaArcMaterial = new THREE.MeshBasicMaterial({ color: 0xff00ff });
-    const fusciaArcGeometry = new THREE.BufferGeometry();
-    const fusciaArcLine = new THREE.Mesh(fusciaArcGeometry, fusciaArcMaterial);
-    scene.add(fusciaArcLine);
-    
-    // Pie shape for tilt altitude arc (fuscia with transparency)
-    const fusciaPieMaterial = new THREE.MeshBasicMaterial({ 
-        color: 0xff00ff, 
-        transparent: true, 
-        opacity: 0.3,
-        side: THREE.DoubleSide
-    });
-    let fusciaPieMesh = null;
-    
-    // Fuscia vertical line from pen tip to beginning of arc
-    const fusciaVerticalLineMaterial = new THREE.LineBasicMaterial({ color: 0xff00ff, linewidth: 2 });
-    const fusciaVerticalLineGeometry = new THREE.BufferGeometry();
-    const fusciaVerticalLine = new THREE.Line(fusciaVerticalLineGeometry, fusciaVerticalLineMaterial);
-    scene.add(fusciaVerticalLine);
-    
-    // Fuscia semicircle for tilt altitude annotation (dotted)
-    const fusciaSemicircleMaterial = new THREE.LineDashedMaterial({ 
-        color: 0xff00ff, 
-        dashSize: 0.1, 
-        gapSize: 0.1,
-        linewidth: 2 
-    });
-    const fusciaSemicircleGeometry = new THREE.BufferGeometry();
-    const fusciaSemicircleLine = new THREE.Line(fusciaSemicircleGeometry, fusciaSemicircleMaterial);
-    scene.add(fusciaSemicircleLine);
-    
-    // Tilt X annotation (light blue)
-    const tiltXArcThickness = 0.02; // Thickness of the tilt X arc tube in inches
-    const tiltXArcMaterial = new THREE.MeshBasicMaterial({ color: 0x88ccff }); // Light blue
-    const tiltXArcGeometry = new THREE.BufferGeometry();
-    const tiltXArcLine = new THREE.Mesh(tiltXArcGeometry, tiltXArcMaterial);
-    scene.add(tiltXArcLine);
-    
-    // Pie shape for tilt X arc (light blue with transparency)
-    const tiltXPieMaterial = new THREE.MeshBasicMaterial({ 
-        color: 0x88ccff, 
-        transparent: true, 
-        opacity: 0.3,
-        side: THREE.DoubleSide
-    });
-    let tiltXPieMesh = null;
-    
-    const tiltXVerticalLineMaterial = new THREE.LineBasicMaterial({ color: 0x88ccff, linewidth: 2 });
-    const tiltXVerticalLineGeometry = new THREE.BufferGeometry();
-    const tiltXVerticalLine = new THREE.Line(tiltXVerticalLineGeometry, tiltXVerticalLineMaterial);
-    scene.add(tiltXVerticalLine);
-    
-    const tiltXDottedCircleMaterial = new THREE.LineDashedMaterial({ 
-        color: 0x88ccff, 
-        dashSize: 0.1, 
-        gapSize: 0.1,
-        linewidth: 2 
-    });
-    const tiltXDottedCircleGeometry = new THREE.BufferGeometry();
-    const tiltXDottedCircleLine = new THREE.Line(tiltXDottedCircleGeometry, tiltXDottedCircleMaterial);
-    scene.add(tiltXDottedCircleLine);
-    
-    // Tilt Y annotation (pink)
-    const tiltYArcThickness = 0.02; // Thickness of the tilt Y arc tube in inches
-    const tiltYArcMaterial = new THREE.MeshBasicMaterial({ color: 0xff88cc }); // Pink
-    const tiltYArcGeometry = new THREE.BufferGeometry();
-    const tiltYArcLine = new THREE.Mesh(tiltYArcGeometry, tiltYArcMaterial);
-    scene.add(tiltYArcLine);
-    
-    // Pie shape for tilt Y arc (pink with transparency)
-    const tiltYPieMaterial = new THREE.MeshBasicMaterial({ 
-        color: 0xff88cc, 
-        transparent: true, 
-        opacity: 0.3,
-        side: THREE.DoubleSide
-    });
-    let tiltYPieMesh = null;
-    
-    const tiltYVerticalLineMaterial = new THREE.LineBasicMaterial({ color: 0xff88cc, linewidth: 2 });
-    const tiltYVerticalLineGeometry = new THREE.BufferGeometry();
-    const tiltYVerticalLine = new THREE.Line(tiltYVerticalLineGeometry, tiltYVerticalLineMaterial);
-    scene.add(tiltYVerticalLine);
-    
-    const tiltYDottedCircleMaterial = new THREE.LineDashedMaterial({ 
-        color: 0xff88cc, 
-        dashSize: 0.1, 
-        gapSize: 0.1,
-        linewidth: 2 
-    });
-    const tiltYDottedCircleGeometry = new THREE.BufferGeometry();
-    const tiltYDottedCircleLine = new THREE.Line(tiltYDottedCircleGeometry, tiltYDottedCircleMaterial);
-    scene.add(tiltYDottedCircleLine);
-    
-    // Helper function to create circular arc points in a plane
-    function createCircularArcInPlane(center, u, v, radius, startAngle, endAngle, segments) {
-        const points = [];
-        for (let i = 0; i <= segments; i++) {
-            const angle = startAngle + (endAngle - startAngle) * (i / segments);
-            const cosA = Math.cos(angle);
-            const sinA = Math.sin(angle);
-            // Point in the plane: center + radius * (cos(angle) * u + sin(angle) * v)
-            const point = center.clone().add(
-                u.clone().multiplyScalar(radius * cosA)
-            ).add(
-                v.clone().multiplyScalar(radius * sinA)
-            );
-            points.push(point);
-        }
-        return points;
-    }
-    
-    // Helper function to create pie shape geometry in XZ plane (tablet surface)
-    function createPieShapeXZ(centerX, centerZ, radius, startAngle, endAngle, yPos, segments = 32) {
-        const shape = new THREE.Shape();
-        // Start at center
-        shape.moveTo(0, 0);
-        // Create arc from startAngle to endAngle
-        for (let i = 0; i <= segments; i++) {
-            const angle = startAngle + (endAngle - startAngle) * (i / segments);
-            const x = radius * Math.cos(angle);
-            const z = radius * Math.sin(angle);
-            if (i === 0) {
-                shape.lineTo(x, z);
-            } else {
-                shape.lineTo(x, z);
-            }
-        }
-        // Close the shape back to center
-        shape.lineTo(0, 0);
-        
-        const geometry = new THREE.ShapeGeometry(shape);
-        // Rotate to XZ plane and position
-        const mesh = new THREE.Mesh(geometry);
-        mesh.rotation.x = -Math.PI / 2; // Rotate to XZ plane
-        mesh.position.set(centerX, yPos, centerZ);
-        return mesh;
-    }
-    
-    // Helper function to create pie shape geometry in an arbitrary plane
-    function createPieShapeInPlane(center, u, v, radius, startAngle, endAngle, segments = 32) {
-        const shape = new THREE.Shape();
-        // Start at center (0, 0 in shape coordinates)
-        shape.moveTo(0, 0);
-        // Create arc from startAngle to endAngle
-        for (let i = 0; i <= segments; i++) {
-            const angle = startAngle + (endAngle - startAngle) * (i / segments);
-            const cosA = Math.cos(angle);
-            const sinA = Math.sin(angle);
-            const x = radius * cosA;
-            const y = radius * sinA;
-            shape.lineTo(x, y);
-        }
-        // Close the shape back to center
-        shape.lineTo(0, 0);
-        
-        const geometry = new THREE.ShapeGeometry(shape);
-        const mesh = new THREE.Mesh(geometry);
-        mesh.position.copy(center);
-        
-        // Create rotation matrix to align XY plane with u-v plane
-        // Normalize the basis vectors
-        const uNorm = u.clone().normalize();
-        const vNorm = v.clone().normalize();
-        const normal = new THREE.Vector3().crossVectors(uNorm, vNorm).normalize();
-        
-        // Create a rotation matrix that aligns:
-        // Local X axis (1,0,0) -> u direction
-        // Local Y axis (0,1,0) -> v direction
-        // Local Z axis (0,0,1) -> normal direction
-        // makeBasis creates a matrix with u, v, normal as columns
-        // This represents a change of basis FROM u-v-normal TO standard
-        // For rotation, we need the inverse (transpose for orthonormal)
-        const rotationMatrix = new THREE.Matrix4();
-        rotationMatrix.makeBasis(uNorm, vNorm, normal);
-        rotationMatrix.transpose(); // Transpose to get rotation FROM standard TO u-v-normal
-        // Extract rotation from the matrix and apply it
-        const quaternion = new THREE.Quaternion();
-        quaternion.setFromRotationMatrix(rotationMatrix);
-        mesh.setRotationFromQuaternion(quaternion);
-        
-        return mesh;
-    }
-
-    const penTopLocal = new THREE.Vector3(0, 4, 0); // barrelHeight = 4
-    const penTopWorld = new THREE.Vector3();
-    const penLineBottom = new THREE.Vector3();
-    const penTipLocal = new THREE.Vector3(0, -0.5, 0); // tipHeight = 0.5
-    const penTipWorld = new THREE.Vector3();
-    const penTipLineBottom = new THREE.Vector3();
-
-        // Pen tilt parameters
-        let tiltAltitude = 0; // degrees
-        let tiltAzimuth = 0; // degrees
-        let barrelRotation = 0; // degrees
-        let tabletOffsetX = 8; // inches (0-16 range, centered at 8)
-        let tabletOffsetZ = 4.5; // inches (0-9 range, centered at 4.5)
-        let showAltitudeAnnotations = false; // checkbox state
-        let showBarrelAnnotations = false; // checkbox state
-        let showTiltXAnnotations = false; // checkbox state (unchecked by default)
-        let showTiltYAnnotations = false; // checkbox state (unchecked by default)
-        
-        // Calculate tilt X and tilt Y from tilt altitude and azimuth
-        function calculateTiltX(altitude, azimuth) {
-            const altRad = (altitude * Math.PI) / 180;
-            const azRad = (azimuth * Math.PI) / 180;
-            const tiltXRad = Math.atan(Math.tan(altRad) * Math.sin(azRad));
-            return (tiltXRad * 180) / Math.PI;
-        }
-        
-        function calculateTiltY(altitude, azimuth) {
-            const altRad = (altitude * Math.PI) / 180;
-            const azRad = (azimuth * Math.PI) / 180;
-            const tiltYRad = Math.atan(Math.tan(altRad) * Math.cos(azRad));
-            return (tiltYRad * 180) / Math.PI;
-        }
-
-        // Calculate pen position and rotation based on distance and tilt using quaternions
-        function updatePenTransform(distance, altitude, azimuth, barrel) {
-            // Tablet is at y=0, height is 0.1, so top surface is at y=0.05
-            const tabletTopY = 0.05;
-            const tipLength = 0.5;
-        
-            // Convert angles to radians
-            const altitudeRad = (altitude * Math.PI) / 180;
-            const azimuthRad = (azimuth * Math.PI) / 180;
-            const barrelRad = (barrel * Math.PI) / 180;
-        
-            // The tip contact point on the tablet (fixed in world space)
-            // Convert from 0-16/0-9 coordinate system to -8 to 8/-4.5 to 4.5 (centered at origin)
-            const tipContactX = THREE.MathUtils.clamp(tabletOffsetX - tabletWidth / 2, -tabletWidth / 2, tabletWidth / 2);
-            const tipContactY = tabletTopY + distance;
-            const tipContactZ = THREE.MathUtils.clamp(tabletOffsetZ - tabletDepth / 2, -tabletDepth / 2, tabletDepth / 2);
-        
-                // Create quaternions for each rotation
-                // Azimuth rotation (around world Y axis)
-                const azimuthQuat = new THREE.Quaternion();
-                azimuthQuat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), azimuthRad);
-            
-                // Altitude rotation (around X axis)
-                const altitudeQuat = new THREE.Quaternion();
-                altitudeQuat.setFromAxisAngle(new THREE.Vector3(1, 0, 0), altitudeRad);
-            
-                // Barrel rotation (around pen's long axis - Y axis in pen's local space)
-                const barrelQuat = new THREE.Quaternion();
-                barrelQuat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), barrelRad);
-            
-                // Combine rotations:
-                // 1. Start with barrel rotation (rotate around local Y before tilting)
-                // 2. Apply altitude tilt
-                // 3. Apply azimuth rotation
-                const quaternion = new THREE.Quaternion();
-                quaternion.multiplyQuaternions(altitudeQuat, barrelQuat);
-                quaternion.premultiply(azimuthQuat);
-            
-                // Apply quaternion to pen
-                penGroup.setRotationFromQuaternion(quaternion);
-        
-                // Calculate offset from tip to penGroup origin in local pen coordinates
-                const tipOffsetLocal = new THREE.Vector3(0, -tipLength, 0);
-        
-                // Transform this offset to world coordinates using pen's quaternion
-                const tipOffsetWorld = tipOffsetLocal.clone().applyQuaternion(quaternion);
-        
-                // Position penGroup so that tip is at contact point
-                penGroup.position.set(
-                    tipContactX - tipOffsetWorld.x,
-                    tipContactY - tipOffsetWorld.y,
-                    tipContactZ - tipOffsetWorld.z
-                );
-                penGroup.updateMatrixWorld(true);
-
-                penTopWorld.copy(penTopLocal).applyMatrix4(penGroup.matrixWorld);
-                penLineBottom.set(penTopWorld.x, tabletTopY, penTopWorld.z);
-
-                penLinePositions[0] = penTopWorld.x;
-                penLinePositions[1] = penTopWorld.y;
-                penLinePositions[2] = penTopWorld.z;
-
-                penLinePositions[3] = penLineBottom.x;
-                penLinePositions[4] = penLineBottom.y;
-                penLinePositions[5] = penLineBottom.z;
-                
-                // Hide green dotted line from top of pen when tilt altitude is zero
-                penLine.visible = (altitude !== 0);
-
-                // Calculate actual pen tip position in world space
-                penTipWorld.copy(penTipLocal).applyMatrix4(penGroup.matrixWorld);
-                // Point directly below tip on tablet surface (same X and Z, Y = tabletTopY)
-                penTipLineBottom.set(penTipWorld.x, tabletTopY, penTipWorld.z);
-                
-                // Update fuscia arc from 2 inches above tip to pen body
-                // Arc is a circular arc centered at the tip, in the plane formed by the vertical line and the pen's long axis
-                
-                const arcCenter = penTipWorld.clone();
-                const arcRadius = 2.0; // inches
-                
-                // Get directions for the plane
-                const verticalDir = new THREE.Vector3(0, 1, 0);
-                const penAxisDir = new THREE.Vector3(0, 1, 0).applyQuaternion(quaternion).normalize();
-                
-                // Create basis vectors for the plane
-                // fusciaU: direction from center to start point (vertical direction, normalized)
-                const fusciaU = verticalDir.clone().normalize();
-                
-                // fusciaV: direction from center to end point (pen axis direction, but we need to make it perpendicular to fusciaU in the plane)
-                // Project pen axis onto the plane perpendicular to vertical, then normalize
-                const penAxisProjected = penAxisDir.clone().sub(fusciaU.clone().multiplyScalar(penAxisDir.dot(fusciaU)));
-                const fusciaV = penAxisProjected.length() > 0.001 ? penAxisProjected.normalize() : new THREE.Vector3(1, 0, 0).applyQuaternion(quaternion).normalize();
-                
-                // Calculate angles: start is at 0° (vertical up), end is at the angle of the pen axis in the plane
-                const fusciaStartAngle = 0; // Vertical direction
-                // Calculate angle of pen axis in the plane
-                const fusciaEndAngle = Math.atan2(penAxisDir.dot(fusciaV), penAxisDir.dot(fusciaU));
-                
-                // Calculate angle from pen tip to tablet surface point (where arc should start)
-                const tabletSurfaceVec = penTipLineBottom.clone().sub(penTipWorld);
-                // Find the angle of this vector in the plane coordinate system
-                const tabletSurfaceAngle = Math.atan2(tabletSurfaceVec.dot(fusciaV), tabletSurfaceVec.dot(fusciaU));
-                
-                // Only show tilt altitude annotations if altitude is not zero and checkbox is checked
-                if (altitude !== 0 && showAltitudeAnnotations) {
-                    // Create vertical line from pen tip to beginning of arc (straight up vertically)
-                    // The beginning of the arc is at angle 0 (vertical up), which is arcRadius distance in the fusciaU direction
-                    const arcStartPoint = arcCenter.clone().add(fusciaU.clone().multiplyScalar(arcRadius));
-                    const fusciaVerticalLinePoints = [
-                        penTipWorld.clone(),
-                        arcStartPoint
-                    ];
-                    fusciaVerticalLineGeometry.setFromPoints(fusciaVerticalLinePoints);
-                    fusciaVerticalLineGeometry.attributes.position.needsUpdate = true;
-                    fusciaVerticalLine.visible = true;
-                    
-                    // Create circular arc
-                    const fusciaArcPoints = createCircularArcInPlane(arcCenter, fusciaU, fusciaV, arcRadius, fusciaStartAngle, fusciaEndAngle, 32);
-                    // Create a curve from the points
-                    const fusciaArcCurve = createCurveFromPoints(fusciaArcPoints);
-                    // Create a tube geometry along the curve
-                    const fusciaTubeGeometry = new THREE.TubeGeometry(fusciaArcCurve, 32, fusciaArcThickness, 8, false);
-                    // Dispose old geometry if it exists
-                    if (fusciaArcLine.geometry) {
-                        fusciaArcLine.geometry.dispose();
-                    }
-                    fusciaArcLine.geometry = fusciaTubeGeometry;
-                    fusciaArcLine.visible = true;
-                    
-                    // Update pie shape for tilt altitude arc using quaternions
-                    if (fusciaPieMesh) {
-                        scene.remove(fusciaPieMesh);
-                        if (fusciaPieMesh.geometry) fusciaPieMesh.geometry.dispose();
-                    }
-                    // Create pie shape using same point generation as createCircularArcInPlane
-                    const fusciaPieShape = new THREE.Shape();
-                    fusciaPieShape.moveTo(0, 0); // Start at center
-                    const fusciaPieSegments = 32;
-                    for (let i = 0; i <= fusciaPieSegments; i++) {
-                        const angle = fusciaStartAngle + (fusciaEndAngle - fusciaStartAngle) * (i / fusciaPieSegments);
-                        const cosA = Math.cos(angle);
-                        const sinA = Math.sin(angle);
-                        fusciaPieShape.lineTo(arcRadius * cosA, arcRadius * sinA);
-                    }
-                    fusciaPieShape.lineTo(0, 0); // Close back to center
-                    const fusciaPieGeometry = new THREE.ShapeGeometry(fusciaPieShape);
-                    fusciaPieMesh = new THREE.Mesh(fusciaPieGeometry, fusciaPieMaterial);
-                    fusciaPieMesh.position.copy(arcCenter);
-                    
-                    // Use quaternions to rotate pie shape to align with fusciaU-fusciaV plane
-                    const fusciaUNorm = fusciaU.clone().normalize();
-                    const fusciaVNorm = fusciaV.clone().normalize();
-                    const fusciaNormal = new THREE.Vector3().crossVectors(fusciaUNorm, fusciaVNorm).normalize();
-                    
-                    // Create quaternion that aligns:
-                    // Local X (1,0,0) -> fusciaU
-                    // Local Y (0,1,0) -> fusciaV  
-                    // Local Z (0,0,1) -> fusciaNormal
-                    const xAxis = new THREE.Vector3(1, 0, 0);
-                    const zAxis = new THREE.Vector3(0, 0, 1);
-                    
-                    // First rotate Z to align with normal
-                    const zToNormalQuat = new THREE.Quaternion();
-                    zToNormalQuat.setFromUnitVectors(zAxis, fusciaNormal);
-                    
-                    // After this rotation, X and Y are in the plane but may not align with fusciaU and fusciaV
-                    // Rotate around normal to align X with fusciaU
-                    const xAfterZRot = xAxis.clone().applyQuaternion(zToNormalQuat);
-                    // Project onto plane
-                    const xInPlane = xAfterZRot.clone().sub(fusciaNormal.clone().multiplyScalar(xAfterZRot.dot(fusciaNormal))).normalize();
-                    // Angle to rotate around normal
-                    const angleToU = Math.acos(Math.max(-1, Math.min(1, xInPlane.dot(fusciaUNorm))));
-                    const cross = new THREE.Vector3().crossVectors(xInPlane, fusciaUNorm);
-                    const sign = cross.dot(fusciaNormal) >= 0 ? 1 : -1;
-                    const alignQuat = new THREE.Quaternion().setFromAxisAngle(fusciaNormal, sign * angleToU);
-                    
-                    // Combine: first align Z, then align X
-                    const fusciaPieRotationQuat = new THREE.Quaternion();
-                    fusciaPieRotationQuat.multiplyQuaternions(alignQuat, zToNormalQuat);
-                    fusciaPieMesh.setRotationFromQuaternion(fusciaPieRotationQuat);
-                    scene.add(fusciaPieMesh);
-                    
-                    // Create dotted fuscia circle (full 360 degrees) that follows the path of the arc
-                    const fusciaCircleSegments = 64; // Enough segments for a smooth circle
-                    const fusciaCirclePoints = createCircularArcInPlane(arcCenter, fusciaU, fusciaV, arcRadius, 0, 2 * Math.PI, fusciaCircleSegments);
-                    fusciaSemicircleGeometry.setFromPoints(fusciaCirclePoints);
-                    fusciaSemicircleGeometry.attributes.position.needsUpdate = true;
-                    fusciaSemicircleLine.computeLineDistances(); // Required for dashed lines
-                    fusciaSemicircleLine.visible = true;
-                } else {
-                    fusciaVerticalLine.visible = false;
-                    fusciaArcLine.visible = false;
-                    fusciaSemicircleLine.visible = false;
-                    // Remove pie shape
-                    if (fusciaPieMesh) {
-                        scene.remove(fusciaPieMesh);
-                        if (fusciaPieMesh.geometry) fusciaPieMesh.geometry.dispose();
-                        fusciaPieMesh = null;
-                    }
-                }
-                
-                // Calculate and update tilt X and tilt Y values
-                const tiltX = calculateTiltX(altitude, azimuth);
-                const tiltY = calculateTiltY(altitude, azimuth);
-                document.getElementById('tilt-x-value').textContent = tiltX.toFixed(1);
-                document.getElementById('tilt-y-value').textContent = tiltY.toFixed(1);
-                
-                // Update tilt X annotation (light blue) - in XZ plane
-                if (tiltX !== 0 && showTiltXAnnotations) {
-                    const tiltXArcCenter = penTipWorld.clone();
-                    const tiltXArcRadius = 2.0; // inches
-                    // Plane is XZ: u is vertical (Y up), v is horizontal (X direction)
-                    const tiltXU = new THREE.Vector3(0, 1, 0); // Vertical up
-                    const tiltXV = new THREE.Vector3(1, 0, 0); // X direction
-                    
-                    // Calculate angle: tilt X is the angle in the XZ plane
-                    const tiltXStartAngle = 0; // Vertical up
-                    const tiltXEndAngle = (tiltX * Math.PI) / 180; // Tilt X angle
-                    
-                    // Vertical line from pen tip to beginning of arc
-                    const tiltXArcStartPoint = tiltXArcCenter.clone().add(tiltXU.clone().multiplyScalar(tiltXArcRadius));
-                    const tiltXVerticalLinePoints = [
-                        penTipWorld.clone(),
-                        tiltXArcStartPoint
-                    ];
-                    tiltXVerticalLineGeometry.setFromPoints(tiltXVerticalLinePoints);
-                    tiltXVerticalLineGeometry.attributes.position.needsUpdate = true;
-                    tiltXVerticalLine.visible = true;
-                    
-                    // Create circular arc
-                    const tiltXArcPoints = createCircularArcInPlane(tiltXArcCenter, tiltXU, tiltXV, tiltXArcRadius, tiltXStartAngle, tiltXEndAngle, 32);
-                    const tiltXArcCurve = createCurveFromPoints(tiltXArcPoints);
-                    const tiltXTubeGeometry = new THREE.TubeGeometry(tiltXArcCurve, 32, tiltXArcThickness, 8, false);
-                    if (tiltXArcLine.geometry) {
-                        tiltXArcLine.geometry.dispose();
-                    }
-                    tiltXArcLine.geometry = tiltXTubeGeometry;
-                    tiltXArcLine.visible = true;
-                    
-                    // Update pie shape for tilt X arc
-                    if (tiltXPieMesh) {
-                        scene.remove(tiltXPieMesh);
-                        if (tiltXPieMesh.geometry) tiltXPieMesh.geometry.dispose();
-                    }
-                    tiltXPieMesh = createPieShapeInPlane(tiltXArcCenter, tiltXU, tiltXV, tiltXArcRadius, tiltXStartAngle, tiltXEndAngle, 32);
-                    tiltXPieMesh.material = tiltXPieMaterial;
-                    scene.add(tiltXPieMesh);
-                    
-                    // Create dotted circle
-                    const tiltXCirclePoints = createCircularArcInPlane(tiltXArcCenter, tiltXU, tiltXV, tiltXArcRadius, 0, 2 * Math.PI, 64);
-                    tiltXDottedCircleGeometry.setFromPoints(tiltXCirclePoints);
-                    tiltXDottedCircleGeometry.attributes.position.needsUpdate = true;
-                    tiltXDottedCircleLine.computeLineDistances();
-                    tiltXDottedCircleLine.visible = true;
-                } else {
-                    tiltXVerticalLine.visible = false;
-                    tiltXArcLine.visible = false;
-                    tiltXDottedCircleLine.visible = false;
-                    // Remove pie shape
-                    if (tiltXPieMesh) {
-                        scene.remove(tiltXPieMesh);
-                        if (tiltXPieMesh.geometry) tiltXPieMesh.geometry.dispose();
-                        tiltXPieMesh = null;
-                    }
-                }
-                
-                // Update tilt Y annotation (pink) - in YZ plane
-                if (tiltY !== 0 && showTiltYAnnotations) {
-                    const tiltYArcCenter = penTipWorld.clone();
-                    const tiltYArcRadius = 2.0; // inches
-                    // Plane is YZ: u is vertical (Y up), v is horizontal (Z direction)
-                    const tiltYU = new THREE.Vector3(0, 1, 0); // Vertical up
-                    const tiltYV = new THREE.Vector3(0, 0, 1); // Z direction
-                    
-                    // Calculate angle: tilt Y is the angle in the YZ plane
-                    const tiltYStartAngle = 0; // Vertical up
-                    const tiltYEndAngle = (tiltY * Math.PI) / 180; // Tilt Y angle
-                    
-                    // Vertical line from pen tip to beginning of arc
-                    const tiltYArcStartPoint = tiltYArcCenter.clone().add(tiltYU.clone().multiplyScalar(tiltYArcRadius));
-                    const tiltYVerticalLinePoints = [
-                        penTipWorld.clone(),
-                        tiltYArcStartPoint
-                    ];
-                    tiltYVerticalLineGeometry.setFromPoints(tiltYVerticalLinePoints);
-                    tiltYVerticalLineGeometry.attributes.position.needsUpdate = true;
-                    tiltYVerticalLine.visible = true;
-                    
-                    // Create circular arc
-                    const tiltYArcPoints = createCircularArcInPlane(tiltYArcCenter, tiltYU, tiltYV, tiltYArcRadius, tiltYStartAngle, tiltYEndAngle, 32);
-                    const tiltYArcCurve = createCurveFromPoints(tiltYArcPoints);
-                    const tiltYTubeGeometry = new THREE.TubeGeometry(tiltYArcCurve, 32, tiltYArcThickness, 8, false);
-                    if (tiltYArcLine.geometry) {
-                        tiltYArcLine.geometry.dispose();
-                    }
-                    tiltYArcLine.geometry = tiltYTubeGeometry;
-                    tiltYArcLine.visible = true;
-                    
-                    // Update pie shape for tilt Y arc using quaternions
-                    if (tiltYPieMesh) {
-                        scene.remove(tiltYPieMesh);
-                        if (tiltYPieMesh.geometry) tiltYPieMesh.geometry.dispose();
-                    }
-                    // Create pie shape using same point generation as createCircularArcInPlane
-                    const tiltYPieShape = new THREE.Shape();
-                    tiltYPieShape.moveTo(0, 0); // Start at center
-                    const tiltYPieSegments = 32;
-                    for (let i = 0; i <= tiltYPieSegments; i++) {
-                        const angle = tiltYStartAngle + (tiltYEndAngle - tiltYStartAngle) * (i / tiltYPieSegments);
-                        const cosA = Math.cos(angle);
-                        const sinA = Math.sin(angle);
-                        tiltYPieShape.lineTo(tiltYArcRadius * cosA, tiltYArcRadius * sinA);
-                    }
-                    tiltYPieShape.lineTo(0, 0); // Close back to center
-                    const tiltYPieGeometry = new THREE.ShapeGeometry(tiltYPieShape);
-                    tiltYPieMesh = new THREE.Mesh(tiltYPieGeometry, tiltYPieMaterial);
-                    tiltYPieMesh.position.copy(tiltYArcCenter);
-                    
-                    // Use quaternions to rotate pie shape to align with tiltYU-tiltYV plane
-                    const tiltYUNorm = tiltYU.clone().normalize();
-                    const tiltYVNorm = tiltYV.clone().normalize();
-                    const tiltYNormal = new THREE.Vector3().crossVectors(tiltYUNorm, tiltYVNorm).normalize();
-                    
-                    // Create quaternion that aligns:
-                    // Local X (1,0,0) -> tiltYU
-                    // Local Y (0,1,0) -> tiltYV  
-                    // Local Z (0,0,1) -> tiltYNormal
-                    const xAxis = new THREE.Vector3(1, 0, 0);
-                    const zAxis = new THREE.Vector3(0, 0, 1);
-                    
-                    // First rotate Z to align with normal
-                    const zToNormalQuat = new THREE.Quaternion();
-                    zToNormalQuat.setFromUnitVectors(zAxis, tiltYNormal);
-                    
-                    // After this rotation, X and Y are in the plane but may not align with tiltYU and tiltYV
-                    // Rotate around normal to align X with tiltYU
-                    const xAfterZRot = xAxis.clone().applyQuaternion(zToNormalQuat);
-                    // Project onto plane
-                    const xInPlane = xAfterZRot.clone().sub(tiltYNormal.clone().multiplyScalar(xAfterZRot.dot(tiltYNormal))).normalize();
-                    // Angle to rotate around normal
-                    const angleToU = Math.acos(Math.max(-1, Math.min(1, xInPlane.dot(tiltYUNorm))));
-                    const cross = new THREE.Vector3().crossVectors(xInPlane, tiltYUNorm);
-                    const sign = cross.dot(tiltYNormal) >= 0 ? 1 : -1;
-                    const alignQuat = new THREE.Quaternion().setFromAxisAngle(tiltYNormal, sign * angleToU);
-                    
-                    // Combine: first align Z, then align X
-                    const tiltYPieRotationQuat = new THREE.Quaternion();
-                    tiltYPieRotationQuat.multiplyQuaternions(alignQuat, zToNormalQuat);
-                    tiltYPieMesh.setRotationFromQuaternion(tiltYPieRotationQuat);
-                    scene.add(tiltYPieMesh);
-                    
-                    // Create dotted circle
-                    const tiltYCirclePoints = createCircularArcInPlane(tiltYArcCenter, tiltYU, tiltYV, tiltYArcRadius, 0, 2 * Math.PI, 64);
-                    tiltYDottedCircleGeometry.setFromPoints(tiltYCirclePoints);
-                    tiltYDottedCircleGeometry.attributes.position.needsUpdate = true;
-                    tiltYDottedCircleLine.computeLineDistances();
-                    tiltYDottedCircleLine.visible = true;
-                } else {
-                    tiltYVerticalLine.visible = false;
-                    tiltYArcLine.visible = false;
-                    tiltYDottedCircleLine.visible = false;
-                    // Remove pie shape
-                    if (tiltYPieMesh) {
-                        scene.remove(tiltYPieMesh);
-                        if (tiltYPieMesh.geometry) tiltYPieMesh.geometry.dispose();
-                        tiltYPieMesh = null;
-                    }
-                }
-                
-                penTipLinePositions[0] = penTipWorld.x;
-                penTipLinePositions[1] = penTipWorld.y;
-                penTipLinePositions[2] = penTipWorld.z;
-                penTipLinePositions[3] = penTipLineBottom.x;
-                penTipLinePositions[4] = penTipLineBottom.y;
-                penTipLinePositions[5] = penTipLineBottom.z;
-
-                penLineGeometry.attributes.position.needsUpdate = true;
-                penLine.computeLineDistances();
-                penTipLineGeometry.attributes.position.needsUpdate = true;
-                penTipLine.computeLineDistances();
-                
-                // Update surface line from tip projection with fixed length
-                const fixedLineLength = 2.0; // 2 inches total
-                
-                const dx = penLineBottom.x - penTipLineBottom.x;
-                const dz = penLineBottom.z - penTipLineBottom.z;
-                const length = Math.sqrt(dx * dx + dz * dz);
-                
-                let extendedEndX = penTipLineBottom.x;
-                let extendedEndZ = penTipLineBottom.z;
-                
-                if (length > 0.001) {
-                    // Normalize direction and extend to fixed length from tip projection
-                    const dirX = dx / length;
-                    const dirZ = dz / length;
-                    extendedEndX = penTipLineBottom.x + dirX * fixedLineLength;
-                    extendedEndZ = penTipLineBottom.z + dirZ * fixedLineLength;
-                }
-                
-                const surfaceLinePoints = [
-                    new THREE.Vector3(penTipLineBottom.x, yOffset, penTipLineBottom.z),
-                    new THREE.Vector3(extendedEndX, yOffset, extendedEndZ)
-                ];
-                surfaceLineGeometry.setFromPoints(surfaceLinePoints);
-                surfaceLineGeometry.attributes.position.needsUpdate = true;
-                
-                // Update arrow at end of surface line (arrowheads removed)
-                const surfaceArrowPoints = createSurfaceArrow(
-                    penTipLineBottom.x, penTipLineBottom.z,
-                    extendedEndX, extendedEndZ
-                );
-                if (surfaceArrowPoints.length > 0) {
-                    surfaceArrowGeometry.setFromPoints(surfaceArrowPoints);
-                    surfaceArrowGeometry.attributes.position.needsUpdate = true;
-                    // surfaceArrowLine.visible = true; // Arrowheads removed
-                } else {
-                    // surfaceArrowLine.visible = false; // Arrowheads removed
-                }
-                
-                // Update arc annotation
-                const arcCenterX = penTipLineBottom.x;
-                const arcCenterZ = penTipLineBottom.z;
-                
-                // Calculate the angle of the surface line direction (from center towards penLineBottom)
-                // This is where the arc and pie should end
-                let surfaceLineAngle = Math.PI / 2; // Default to 90° if length is too small
-                if (length > 0.001) {
-                    // Angle in XZ plane: atan2 gives angle from +X axis
-                    // The surface line goes from center towards penLineBottom
-                    surfaceLineAngle = Math.atan2(dz, dx);
-                }
-                
-                // Arc starts at a fixed angle and grows counter-clockwise as azimuth increases
-                const startAngle = Math.PI / 2 - Math.PI; // Fixed at -90° (180 degrees earlier)
-                const endAngle = startAngle + (azimuth * Math.PI) / 180; // Grows counter-clockwise (increasing angle) as azimuth increases
-                const arcLength = Math.abs(azimuth);
-                const arcSegments = Math.max(8, Math.floor(arcLength / 5)); // More segments for larger arcs
-                
-                // Show circle always (same visibility as surface line) - using quaternions
-                const dottedCircleSegments = 64; // Enough segments for a smooth circle
-                const azimuthArcCenter = new THREE.Vector3(arcCenterX, yOffset, arcCenterZ);
-                const dottedCirclePoints = [];
-                
-                // Use quaternion to rotate from XY to XZ plane
-                const xzPlaneQuat = new THREE.Quaternion();
-                xzPlaneQuat.setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
-                
-                // Create full circle points in local XY plane, then transform to XZ plane
-                for (let i = 0; i <= dottedCircleSegments; i++) {
-                    const angle = (2 * Math.PI * i) / dottedCircleSegments;
-                    const cosA = Math.cos(angle);
-                    const sinA = Math.sin(angle);
-                    // Point in local XY plane
-                    const localPoint = new THREE.Vector3(arcRadius * cosA, arcRadius * sinA, 0);
-                    // Transform to XZ plane using quaternion
-                    const worldPoint = localPoint.clone().applyQuaternion(xzPlaneQuat);
-                    // Translate to arc center
-                    worldPoint.add(azimuthArcCenter);
-                    dottedCirclePoints.push(worldPoint);
-                }
-                
-                dottedArcGeometry.setFromPoints(dottedCirclePoints);
-                dottedArcGeometry.attributes.position.needsUpdate = true;
-                dottedArcLine.computeLineDistances(); // Required for dashed lines
-                dottedArcLine.visible = true;
-                
-                // Show arc if azimuth is significant
-                if (arcLength > 0.1) {
-                    // Create arc points using quaternions
-                    // Arc is in XZ plane (tablet surface), so we create points in XY plane and rotate to XZ
-                    const azimuthArcCenter = new THREE.Vector3(arcCenterX, yOffset, arcCenterZ);
-                    const arcPoints = [];
-                    
-                    // Define the plane: XZ plane (Y-up is normal, X and Z are the basis vectors)
-                    // Create quaternion that rotates from XY plane (Z-up) to XZ plane (Y-up)
-                    // This is a -90° rotation around X axis
-                    const xzPlaneQuat = new THREE.Quaternion();
-                    xzPlaneQuat.setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
-                    
-                    // Create points in local XY plane, then transform to XZ plane using quaternion
-                    // Swap start and end angles to grow in opposite direction
-                    for (let i = 0; i <= arcSegments; i++) {
-                        const angle = endAngle + (startAngle - endAngle) * (i / arcSegments);
-                        const cosA = Math.cos(angle);
-                        const sinA = Math.sin(angle);
-                        // Point in local XY plane
-                        const localPoint = new THREE.Vector3(arcRadius * cosA, arcRadius * sinA, 0);
-                        // Transform to XZ plane using quaternion
-                        const worldPoint = localPoint.clone().applyQuaternion(xzPlaneQuat);
-                        // Translate to arc center
-                        worldPoint.add(azimuthArcCenter);
-                        arcPoints.push(worldPoint);
-                    }
-                    
-                    // Create a curve from the points
-                    const arcCurve = createCurveFromPoints(arcPoints);
-                    // Create a tube geometry along the curve
-                    const tubeGeometry = new THREE.TubeGeometry(arcCurve, arcSegments, arcThickness, 8, false);
-                    // Dispose old geometry if it exists
-                    if (arcLine.geometry) {
-                        arcLine.geometry.dispose();
-                    }
-                    arcLine.geometry = tubeGeometry;
-                    arcLine.visible = true;
-                    
-                    // Update pie shape for azimuth arc using quaternions (starts 180 degrees earlier)
-                    if (arcPieMesh) {
-                        arcAnnotationGroup.remove(arcPieMesh);
-                        if (arcPieMesh.geometry) arcPieMesh.geometry.dispose();
-                    }
-                    // Create pie shape starting at same angle as arc, growing clockwise together
-                    // Pie shape is created in XY plane, then rotated to XZ plane using same quaternion as arc
-                    // Use same angles as arc so pie grows clockwise with the arc
-                    const pieStartAngle = startAngle;
-                    const pieEndAngle = endAngle;
-                    const azimuthPieShape = new THREE.Shape();
-                    azimuthPieShape.moveTo(0, 0); // Start at center
-                    // Use same number of segments and angle calculation as arc
-                    for (let i = 0; i <= arcSegments; i++) {
-                        const angle = pieStartAngle + (pieEndAngle - pieStartAngle) * (i / arcSegments);
-                        const x = arcRadius * Math.cos(angle);
-                        const z = arcRadius * Math.sin(angle);
-                        azimuthPieShape.lineTo(x, z);
-                    }
-                    azimuthPieShape.lineTo(0, 0); // Close back to center
-                    const azimuthPieGeometry = new THREE.ShapeGeometry(azimuthPieShape);
-                    arcPieMesh = new THREE.Mesh(azimuthPieGeometry, arcPieMaterial);
-                    arcPieMesh.position.set(arcCenterX, yOffset, arcCenterZ);
-                    
-                    // Use same quaternion as arc to rotate pie shape to XZ plane (tablet surface)
-                    // This is the same xzPlaneQuat used for the arc points
-                    arcPieMesh.setRotationFromQuaternion(xzPlaneQuat);
-                    arcAnnotationGroup.add(arcPieMesh);
-                    
-                    // Update arrow at end of arc (arrowheads removed)
-                    const arrowPoints = createArrow(arcCenterX, arcCenterZ, arcRadius, endAngle);
-                    arrowGeometry.setFromPoints(arrowPoints);
-                    arrowGeometry.attributes.position.needsUpdate = true;
-                    // arrowLine.visible = true; // Arrowheads removed
-                } else {
-                    // arrowLine.visible = false; // Arrowheads removed
-                    arcLine.visible = false;
-                    // Remove pie shape
-                    if (arcPieMesh) {
-                        arcAnnotationGroup.remove(arcPieMesh);
-                        if (arcPieMesh.geometry) arcPieMesh.geometry.dispose();
-                        arcPieMesh = null;
-                    }
-                }
-                
-                // Update barrel rotation annotations (centered on top of pen, perpendicular to pen axis)
-                const barrelCenter = penTopWorld.clone();
-                
-                // Get pen's long axis direction (Y axis in pen's local space, transformed to world)
-                const penAxis = new THREE.Vector3(0, 1, 0).applyQuaternion(quaternion).normalize();
-                
-                // Create quaternion for pen orientation without barrel rotation
-                // This gives us the orientation of the plane for barrel rotation annotations
-                // Order: azimuth * altitude (no barrel rotation)
-                const orientationQuat = new THREE.Quaternion();
-                orientationQuat.multiplyQuaternions(altitudeQuat, new THREE.Quaternion()); // identity quaternion (no barrel rotation)
-                orientationQuat.premultiply(azimuthQuat);
-                
-                // Transform pen's local X and Z axes using orientation quaternion (without barrel rotation)
-                // These give us the basis vectors for the plane perpendicular to pen axis
-                const u = new THREE.Vector3(1, 0, 0).applyQuaternion(orientationQuat).normalize();
-                const v = new THREE.Vector3(0, 0, 1).applyQuaternion(orientationQuat).normalize();
-                
-                // Barrel arc starts at 90° and extends by barrel rotation (reversed direction)
-                const barrelStartAngle = Math.PI / 2; // 90 degrees
-                const barrelEndAngle = Math.PI / 2 - (barrel * Math.PI) / 180; // Start at 90° and extend by barrel rotation (reversed)
-                const barrelArcLength = Math.abs(barrel);
-                const barrelArcSegments = Math.max(8, Math.floor(barrelArcLength / 5));
-                
-                // Only show barrel annotations if checkbox is checked
-                if (showBarrelAnnotations) {
-                    // Only show barrel arc if rotation is significant
-                    if (barrelArcLength > 0.1) {
-                        const barrelArcPoints = createBarrelArcPoints(barrelCenter, penAxis, u, v, barrelArcRadius, barrelStartAngle, barrelEndAngle, barrelArcSegments);
-                        // Create a curve from the points
-                        const barrelArcCurve = createCurveFromPoints(barrelArcPoints);
-                        // Create a tube geometry along the curve
-                        const barrelTubeGeometry = new THREE.TubeGeometry(barrelArcCurve, barrelArcSegments, barrelArcThickness, 8, false);
-                        // Dispose old geometry if it exists
-                        if (barrelArcLine.geometry) {
-                            barrelArcLine.geometry.dispose();
-                        }
-                        barrelArcLine.geometry = barrelTubeGeometry;
-                        barrelArcLine.visible = true;
-                        
-                        // Update pie shape for barrel rotation arc (grow with arc, starting 180 deg earlier)
-                        if (barrelPieMesh) {
-                            barrelAnnotationGroup.remove(barrelPieMesh);
-                            if (barrelPieMesh.geometry) barrelPieMesh.geometry.dispose();
-                        }
-                        // Create pie shape using exact same calculation as arc but starting 180 degrees earlier
-                        // Arc: from barrelStartAngle to barrelEndAngle
-                        // Pie: starts 180 degrees before current position (barrelStartAngle - 2*Math.PI, which wraps to same as barrelStartAngle - 0)
-                        // Actually, to start 180 degrees earlier than current, subtract another Math.PI
-                        const pieStartAngle = (barrelStartAngle - Math.PI) - Math.PI;
-                        const pieEndAngle = (barrelEndAngle - Math.PI) - Math.PI;
-                        // Create shape using same point generation as createBarrelArcPoints
-                        const pieShape = new THREE.Shape();
-                        pieShape.moveTo(0, 0); // Start at center
-                        const pieSegments = 32;
-                        for (let i = 0; i <= pieSegments; i++) {
-                            const angle = pieStartAngle + (pieEndAngle - pieStartAngle) * (i / pieSegments);
-                            const cosA = Math.cos(angle);
-                            const sinA = Math.sin(angle);
-                            // Use same formula as createBarrelArcPoints: radius * (cos * u + sin * v)
-                            // But in shape coordinates, this becomes (radius * cos, radius * sin)
-                            pieShape.lineTo(barrelArcRadius * cosA, barrelArcRadius * sinA);
-                        }
-                        pieShape.lineTo(0, 0); // Close back to center
-                        const pieGeometry = new THREE.ShapeGeometry(pieShape);
-                        barrelPieMesh = new THREE.Mesh(pieGeometry, barrelPieMaterial);
-                        barrelPieMesh.position.copy(barrelCenter);
-                        // Use quaternions to rotate pie shape to align with u-v plane
-                        // Pie shape is created in XY plane where:
-                        //   - Local X (1,0,0) should align with u
-                        //   - Local Y (0,1,0) should align with v
-                        //   - Local Z (0,0,1) should align with normal (pen axis direction)
-                        // The orientationQuat already transforms pen's local axes to world
-                        // We need to rotate from XY plane (Z-up) to the u-v plane
-                        const uNorm = u.clone().normalize();
-                        const vNorm = v.clone().normalize();
-                        const normal = new THREE.Vector3().crossVectors(uNorm, vNorm).normalize();
-                        
-                        // Create quaternion that aligns:
-                        // Local X (1,0,0) -> u
-                        // Local Y (0,1,0) -> v  
-                        // Local Z (0,0,1) -> normal
-                        // This is equivalent to the orientationQuat but for the pie's coordinate system
-                        // We can construct it by rotating from standard basis to u-v-normal basis
-                        const xAxis = new THREE.Vector3(1, 0, 0);
-                        const yAxis = new THREE.Vector3(0, 1, 0);
-                        const zAxis = new THREE.Vector3(0, 0, 1);
-                        
-                        // First rotate Z to align with normal
-                        const zToNormalQuat = new THREE.Quaternion();
-                        zToNormalQuat.setFromUnitVectors(zAxis, normal);
-                        
-                        // After this rotation, X and Y are in the plane but may not align with u and v
-                        // Rotate around normal to align X with u
-                        const xAfterZRot = xAxis.clone().applyQuaternion(zToNormalQuat);
-                        // Project onto plane
-                        const xInPlane = xAfterZRot.clone().sub(normal.clone().multiplyScalar(xAfterZRot.dot(normal))).normalize();
-                        // Angle to rotate around normal
-                        const angleToU = Math.acos(Math.max(-1, Math.min(1, xInPlane.dot(uNorm))));
-                        const cross = new THREE.Vector3().crossVectors(xInPlane, uNorm);
-                        const sign = cross.dot(normal) >= 0 ? 1 : -1;
-                        const alignQuat = new THREE.Quaternion().setFromAxisAngle(normal, sign * angleToU);
-                        
-                        // Combine: first align Z, then align X
-                        const pieRotationQuat = new THREE.Quaternion();
-                        pieRotationQuat.multiplyQuaternions(alignQuat, zToNormalQuat);
-                        barrelPieMesh.setRotationFromQuaternion(pieRotationQuat);
-                        barrelAnnotationGroup.add(barrelPieMesh);
-                        
-                        // Update arrow at end of barrel arc (arrowheads removed)
-                        const barrelArrowPoints = createBarrelArrow(barrelCenter, penAxis, u, v, barrelArcRadius, barrelEndAngle);
-                        barrelArrowGeometry.setFromPoints(barrelArrowPoints);
-                        barrelArrowGeometry.attributes.position.needsUpdate = true;
-                        // barrelArrowLine.visible = true; // Arrowheads removed
-                    } else {
-                        // barrelArrowLine.visible = false; // Arrowheads removed
-                        barrelArcLine.visible = false;
-                        // Remove pie shape
-                        if (barrelPieMesh) {
-                            barrelAnnotationGroup.remove(barrelPieMesh);
-                            if (barrelPieMesh.geometry) barrelPieMesh.geometry.dispose();
-                            barrelPieMesh = null;
-                        }
-                    }
-                    
-                    // Create dotted circle (full 360°) in the plane perpendicular to pen axis
-                    const barrelDottedCircleSegments = 64; // Enough segments for a smooth circle
-                    const barrelDottedCirclePoints = createBarrelArcPoints(barrelCenter, penAxis, u, v, barrelArcRadius, 0, 2 * Math.PI, barrelDottedCircleSegments);
-                    barrelDottedCircleGeometry.setFromPoints(barrelDottedCirclePoints);
-                    barrelDottedCircleGeometry.attributes.position.needsUpdate = true;
-                    barrelDottedCircleLine.computeLineDistances(); // Required for dashed lines
-                    barrelDottedCircleLine.visible = true;
-                    
-                    // Update barrel surface line (fixed length 1.5 inches from center in the perpendicular plane)
-                    const barrelFixedLineLength = 1.5; // inches
-                    const barrelDir = u.clone().multiplyScalar(Math.cos(barrelEndAngle)).add(v.clone().multiplyScalar(Math.sin(barrelEndAngle)));
-                    barrelDir.normalize();
-                    const barrelDirection = barrelDir.multiplyScalar(barrelFixedLineLength);
-                    
-                    const barrelSurfaceLinePoints = [
-                        barrelCenter.clone(),
-                        barrelCenter.clone().add(barrelDirection)
-                    ];
-                    barrelSurfaceLineGeometry.setFromPoints(barrelSurfaceLinePoints);
-                    barrelSurfaceLineGeometry.attributes.position.needsUpdate = true;
-                    barrelSurfaceLine.visible = true;
-                    
-                    // Update arrow at end of barrel surface line (arrowheads removed)
-                    const barrelSurfaceArrowPoints = createBarrelSurfaceArrow(barrelCenter, barrelDirection, penAxis);
-                    if (barrelSurfaceArrowPoints.length > 0) {
-                        barrelSurfaceArrowGeometry.setFromPoints(barrelSurfaceArrowPoints);
-                        barrelSurfaceArrowGeometry.attributes.position.needsUpdate = true;
-                        // barrelSurfaceArrowLine.visible = true; // Arrowheads removed
-                    } else {
-                        // barrelSurfaceArrowLine.visible = false; // Arrowheads removed
-                    }
-                } else {
-                    // Hide all barrel annotations
-                    barrelArcLine.visible = false;
-                    barrelArrowLine.visible = false;
-                    barrelDottedCircleLine.visible = false;
-                    barrelSurfaceLine.visible = false;
-                    barrelSurfaceArrowLine.visible = false;
-                    // Remove pie shape
-                    if (barrelPieMesh) {
-                        barrelAnnotationGroup.remove(barrelPieMesh);
-                        if (barrelPieMesh.geometry) barrelPieMesh.geometry.dispose();
-                        barrelPieMesh = null;
-                    }
-                }
-            }
-
-        // Initialize pen position
-        updatePenTransform(0, tiltAltitude, tiltAzimuth, barrelRotation);
-
+    // UI Event Handlers
     // Pen distance slider
     const penDistanceSlider = document.getElementById('pen-distance');
     const distanceValueDisplay = document.getElementById('distance-value');
@@ -1557,7 +121,7 @@
     penDistanceSlider.addEventListener('input', (e) => {
         const distance = parseFloat(e.target.value);
         distanceValueDisplay.textContent = distance.toFixed(1);
-        updatePenTransform(distance, tiltAltitude, tiltAzimuth, barrelRotation);
+        sim.setDistance(distance);
     });
 
         // Barrel rotation slider
@@ -1565,10 +129,9 @@
         const barrelRotationValueDisplay = document.getElementById('barrel-rotation-value');
 
         barrelRotationSlider.addEventListener('input', (e) => {
-            barrelRotation = parseFloat(e.target.value);
+        const barrelRotation = parseFloat(e.target.value);
             barrelRotationValueDisplay.textContent = barrelRotation.toFixed(0);
-            const distance = parseFloat(penDistanceSlider.value);
-            updatePenTransform(distance, tiltAltitude, tiltAzimuth, barrelRotation);
+        sim.setBarrelRotation(barrelRotation);
         });
 
     // Tilt azimuth slider
@@ -1577,6 +140,7 @@
 
     // Function to update azimuth slider enabled state based on altitude
     function updateAzimuthSliderState() {
+        const tiltAltitude = parseFloat(document.getElementById('tilt-altitude').value);
         if (tiltAltitude === 0) {
             tiltAzimuthSlider.disabled = true;
             tiltAzimuthSlider.style.opacity = '0.5';
@@ -1589,10 +153,11 @@
     }
 
     tiltAzimuthSlider.addEventListener('input', (e) => {
-        tiltAzimuth = parseFloat(e.target.value);
+        const tiltAzimuth = parseFloat(e.target.value);
         azimuthValueDisplay.textContent = tiltAzimuth.toFixed(0);
-        const distance = parseFloat(penDistanceSlider.value);
-        updatePenTransform(distance, tiltAltitude, tiltAzimuth, barrelRotation);
+        const result = sim.setTiltAzimuth(tiltAzimuth);
+        document.getElementById('tilt-x-value').textContent = result.tiltX.toFixed(1);
+        document.getElementById('tilt-y-value').textContent = result.tiltY.toFixed(1);
     });
 
     // Tilt altitude slider
@@ -1600,11 +165,12 @@
     const altitudeValueDisplay = document.getElementById('altitude-value');
 
     tiltAltitudeSlider.addEventListener('input', (e) => {
-        tiltAltitude = parseFloat(e.target.value);
+        const tiltAltitude = parseFloat(e.target.value);
         altitudeValueDisplay.textContent = tiltAltitude.toFixed(0);
-        const distance = parseFloat(penDistanceSlider.value);
-        updateAzimuthSliderState(); // Update azimuth slider state when altitude changes
-        updatePenTransform(distance, tiltAltitude, tiltAzimuth, barrelRotation);
+        updateAzimuthSliderState();
+        const result = sim.setTiltAltitude(tiltAltitude);
+        document.getElementById('tilt-x-value').textContent = result.tiltX.toFixed(1);
+        document.getElementById('tilt-y-value').textContent = result.tiltY.toFixed(1);
     });
     
     // Initialize azimuth slider state
@@ -1617,269 +183,234 @@
     const tabletPositionZValueDisplay = document.getElementById('tablet-position-z-value');
 
     tabletPositionXSlider.addEventListener('input', (e) => {
-        tabletOffsetX = parseFloat(e.target.value);
-        tabletPositionXValueDisplay.textContent = tabletOffsetX.toFixed(1);
-        const distance = parseFloat(penDistanceSlider.value);
-        updatePenTransform(distance, tiltAltitude, tiltAzimuth, barrelRotation);
+        const tabletX = parseFloat(e.target.value);
+        tabletPositionXValueDisplay.textContent = tabletX.toFixed(1);
+        sim.setTabletPositionX(tabletX);
     });
 
     tabletPositionZSlider.addEventListener('input', (e) => {
-        tabletOffsetZ = parseFloat(e.target.value);
-        tabletPositionZValueDisplay.textContent = tabletOffsetZ.toFixed(1);
-        const distance = parseFloat(penDistanceSlider.value);
-        updatePenTransform(distance, tiltAltitude, tiltAzimuth, barrelRotation);
+        const tabletZ = parseFloat(e.target.value);
+        tabletPositionZValueDisplay.textContent = tabletZ.toFixed(1);
+        sim.setTabletPositionZ(tabletZ);
     });
-
-    // Grid helper
-    const gridHelper = new THREE.GridHelper(50, 50, 0x444444, 0x222222);
-    gridHelper.position.y = -5;
-    scene.add(gridHelper);
-
-    // Axes helper
-    //const axesHelper = new THREE.AxesHelper(9);
-    //scene.add(axesHelper);
-
-
-
-    // Add axis labels
-    function createTextLabel(text, color, position) {
-        const canvas = document.createElement('canvas');
-        const context = canvas.getContext('2d');
-        canvas.width = 64;
-        canvas.height = 64;
-
-        context.fillStyle = color;
-        context.font = 'Bold 16px Arial';
-        context.textAlign = 'center';
-        context.textBaseline = 'middle';
-        context.fillText(text, 32, 32);
-
-        const texture = new THREE.CanvasTexture(canvas);
-        const spriteMaterial = new THREE.SpriteMaterial({ map: texture });
-        const sprite = new THREE.Sprite(spriteMaterial);
-        sprite.position.copy(position);
-        sprite.scale.set(2, 2, 1);
-
-        return sprite;
-    }
-
-    // Z,Y labels swapped to match how screen coordinates and tablet think about space
-    const xLabelUser = 'X';
-    const yLabelUser = 'Z';
-    const zLabelUser = 'Y';
-
-    // Position arrows just beyond the top left corner of the tablet
-    // Tablet is 16" × 9", centered at origin, so top left is at (-8, 0.05, 4.5)
-    // Position arrows on the other side (front/bottom) along the Z axis
-    // Note: tabletWidth and tabletDepth are already defined above
-    const tabletTopY = 0.05; // top surface Y coordinate
-    const arrowOffset = 0.5; // inches beyond the corner
-    const arrowPos = new THREE.Vector3(
-        -tabletWidth / 2 - arrowOffset,  // Just to the left of left edge
-        tabletTopY,                      // On tablet surface
-        -tabletDepth / 2 - arrowOffset   // Just beyond the bottom/front edge (opposite side)
-    );
-
-    const xLabelDistance = 3;
-    const yLabelDistance = 3;
-    const zLabelDistance = 3;
-
-    const xAxisColor = '#cc0055';
-    const yAxisColor = '#00cc66';
-    const zAxisColor = '#0055cc';
-    // axis labels - positioned at the end of each arrow from the new origin
-    const xLabel = createTextLabel(xLabelUser, xAxisColor, arrowPos.clone().add(new THREE.Vector3(xLabelDistance, 0, 0)));
-    const yLabel = createTextLabel( yLabelUser , yAxisColor, arrowPos.clone().add(new THREE.Vector3(0, yLabelDistance, 0)));
-    const zLabel = createTextLabel(zLabelUser, zAxisColor , arrowPos.clone().add(new THREE.Vector3(0, 0, zLabelDistance)));
-
-    scene.add(xLabel);
-    scene.add(yLabel);
-    scene.add(zLabel);
-    const arrowGap = 0.5;
-    const xArrow = new THREE.ArrowHelper(
-        new THREE.Vector3(1, 0, 0), // Direction
-        arrowPos,                   // Origin
-        xLabelDistance-arrowGap ,             // Length
-        xAxisColor                    // Color
-    );
-
-    const yArrow = new THREE.ArrowHelper(
-        new THREE.Vector3(0, 1, 0), // Direction
-        arrowPos,                   // Origin
-        yLabelDistance-arrowGap ,             // Length
-        yAxisColor                  // Color
-    );
-
-    const zArrow = new THREE.ArrowHelper(
-        new THREE.Vector3(0, 0, 1), // Direction
-        arrowPos,                   // Origin
-        zLabelDistance-arrowGap,             // Length
-        zAxisColor                  // Color
-    );
-    scene.add(xArrow);
-    scene.add(yArrow);
-    scene.add(zArrow);
-
-    // Animation loop
-    function animate() {
-        requestAnimationFrame(animate);
-
-        // Update controls
-        controls.update();
-
-        renderer.render(scene, camera);
-    }
-    animate();
 
     // Handle window resize
     window.addEventListener('resize', () => {
-        const aspect = viewer.clientWidth / viewer.clientHeight;
-        
-        // Update perspective camera
-        perspectiveCamera.aspect = aspect;
-        perspectiveCamera.updateProjectionMatrix();
-        
-        // Update orthographic camera
-        orthographicCamera.left = -orthoSize * aspect;
-        orthographicCamera.right = orthoSize * aspect;
-        orthographicCamera.updateProjectionMatrix();
-        
-        renderer.setSize(viewer.clientWidth, viewer.clientHeight);
+        sim.onResize();
     });
     
     // Axonometric view checkbox
     const axonometricCheckbox = document.getElementById('axonometric-view');
     axonometricCheckbox.addEventListener('change', (e) => {
-        const isAxonometric = e.target.checked;
-        
-        if (isAxonometric) {
-            // Switch to orthographic
-            // Copy position and rotation from perspective camera
-            orthographicCamera.position.copy(perspectiveCamera.position);
-            orthographicCamera.rotation.copy(perspectiveCamera.rotation);
-            camera = orthographicCamera;
-        } else {
-            // Switch to perspective
-            // Copy position and rotation from orthographic camera
-            perspectiveCamera.position.copy(orthographicCamera.position);
-            perspectiveCamera.rotation.copy(orthographicCamera.rotation);
-            camera = perspectiveCamera;
-        }
-        
-        // Update controls to use new camera
-        controls.object = camera;
-        controls.update();
+        sim.setAxonometricView(e.target.checked);
     });
     
     // Tilt azimuth annotations visibility checkbox
     const azimuthAnnotationsCheckbox = document.getElementById('azimuth-annotations');
-    // Set initial visibility based on checkbox state (unchecked by default)
-    arcAnnotationGroup.visible = azimuthAnnotationsCheckbox.checked;
-    surfaceLine.visible = azimuthAnnotationsCheckbox.checked;
+    sim.setAzimuthAnnotationsVisible(azimuthAnnotationsCheckbox.checked);
     azimuthAnnotationsCheckbox.addEventListener('change', (e) => {
-        const isVisible = e.target.checked;
-        arcAnnotationGroup.visible = isVisible;
-        surfaceLine.visible = isVisible;
-        // surfaceArrowLine.visible = isVisible; // Arrowheads removed
+        sim.setAzimuthAnnotationsVisible(e.target.checked);
     });
     
     // Tilt altitude annotations visibility checkbox
     const altitudeAnnotationsCheckbox = document.getElementById('altitude-annotations');
     altitudeAnnotationsCheckbox.addEventListener('change', (e) => {
-        showAltitudeAnnotations = e.target.checked;
-        // Update visibility immediately and trigger a pen transform update
-        const distance = parseFloat(penDistanceSlider.value);
-        updatePenTransform(distance, tiltAltitude, tiltAzimuth, barrelRotation);
+        sim.setAltitudeAnnotationsVisible(e.target.checked);
     });
     
     // Barrel rotation annotations visibility checkbox
     const barrelAnnotationsCheckbox = document.getElementById('barrel-annotations');
     barrelAnnotationsCheckbox.addEventListener('change', (e) => {
-        showBarrelAnnotations = e.target.checked;
-        // Update visibility immediately and trigger a pen transform update
-        const distance = parseFloat(penDistanceSlider.value);
-        updatePenTransform(distance, tiltAltitude, tiltAzimuth, barrelRotation);
+        sim.setBarrelAnnotationsVisible(e.target.checked);
     });
     
     // Tilt X annotations visibility checkbox
     const tiltXAnnotationsCheckbox = document.getElementById('tilt-x-annotations');
     tiltXAnnotationsCheckbox.addEventListener('change', (e) => {
-        showTiltXAnnotations = e.target.checked;
-        // Update visibility immediately and trigger a pen transform update
-        const distance = parseFloat(penDistanceSlider.value);
-        updatePenTransform(distance, tiltAltitude, tiltAzimuth, barrelRotation);
+        sim.setTiltXAnnotationsVisible(e.target.checked);
     });
     
     // Tilt Y annotations visibility checkbox
     const tiltYAnnotationsCheckbox = document.getElementById('tilt-y-annotations');
     tiltYAnnotationsCheckbox.addEventListener('change', (e) => {
-        showTiltYAnnotations = e.target.checked;
-        // Update visibility immediately and trigger a pen transform update
-        const distance = parseFloat(penDistanceSlider.value);
-        updatePenTransform(distance, tiltAltitude, tiltAzimuth, barrelRotation);
+        sim.setTiltYAnnotationsVisible(e.target.checked);
     });
     
     // Axis markers visibility checkbox
     const axisMarkersCheckbox = document.getElementById('axis-markers');
+    sim.setAxisMarkersVisible(axisMarkersCheckbox.checked);
     axisMarkersCheckbox.addEventListener('change', (e) => {
-        const isVisible = e.target.checked;
-        xArrow.visible = isVisible;
-        yArrow.visible = isVisible;
-        zArrow.visible = isVisible;
-        xLabel.visible = isVisible;
-        yLabel.visible = isVisible;
-        zLabel.visible = isVisible;
+        sim.setAxisMarkersVisible(e.target.checked);
     });
-
+    
     // Reset pen button
     document.getElementById('reset-btn').addEventListener('click', () => {
-        // Reset to default values
-        const defaultDistance = 0;
-        const defaultTiltAltitude = 0;
-        const defaultTiltAzimuth = 0;
-        const defaultBarrelRotation = 0;
-        const defaultTabletX = 8;
-        const defaultTabletZ = 4.5;
-        
-        // Update variables
-        tiltAltitude = defaultTiltAltitude;
-        tiltAzimuth = defaultTiltAzimuth;
-        barrelRotation = defaultBarrelRotation;
-        tabletOffsetX = defaultTabletX;
-        tabletOffsetZ = defaultTabletZ;
+        const defaults = sim.reset();
         
         // Update sliders
-        penDistanceSlider.value = defaultDistance;
-        tiltAltitudeSlider.value = defaultTiltAltitude;
-        tiltAzimuthSlider.value = defaultTiltAzimuth;
-        barrelRotationSlider.value = defaultBarrelRotation;
-        tabletPositionXSlider.value = defaultTabletX;
-        tabletPositionZSlider.value = defaultTabletZ;
+        penDistanceSlider.value = defaults.distance;
+        tiltAltitudeSlider.value = defaults.tiltAltitude;
+        tiltAzimuthSlider.value = defaults.tiltAzimuth;
+        barrelRotationSlider.value = defaults.barrelRotation;
+        tabletPositionXSlider.value = defaults.tabletX;
+        tabletPositionZSlider.value = defaults.tabletZ;
         
         // Update displays
-        distanceValueDisplay.textContent = defaultDistance.toFixed(1);
-        altitudeValueDisplay.textContent = defaultTiltAltitude.toFixed(0);
-        azimuthValueDisplay.textContent = defaultTiltAzimuth.toFixed(0);
-        barrelRotationValueDisplay.textContent = defaultBarrelRotation.toFixed(0);
-        tabletPositionXValueDisplay.textContent = defaultTabletX.toFixed(1);
-        tabletPositionZValueDisplay.textContent = defaultTabletZ.toFixed(1);
+        distanceValueDisplay.textContent = defaults.distance.toFixed(1);
+        altitudeValueDisplay.textContent = defaults.tiltAltitude.toFixed(0);
+        azimuthValueDisplay.textContent = defaults.tiltAzimuth.toFixed(0);
+        barrelRotationValueDisplay.textContent = defaults.barrelRotation.toFixed(0);
+        tabletPositionXValueDisplay.textContent = defaults.tabletX.toFixed(1);
+        tabletPositionZValueDisplay.textContent = defaults.tabletZ.toFixed(1);
         
-        // Update azimuth slider state (disabled when altitude is 0)
+        // Update azimuth slider state
         updateAzimuthSliderState();
         
         // Update pen transform
-        updatePenTransform(defaultDistance, defaultTiltAltitude, defaultTiltAzimuth, defaultBarrelRotation);
+        sim.setDistance(defaults.distance);
+        sim.setTiltAltitude(defaults.tiltAltitude);
+        sim.setTiltAzimuth(defaults.tiltAzimuth);
+        sim.setBarrelRotation(defaults.barrelRotation);
+        sim.setTabletPositionX(defaults.tabletX);
+        sim.setTabletPositionZ(defaults.tabletZ);
     });
-
+    
+    // Demo button
+    document.getElementById('demo-btn').addEventListener('click', () => {
+        // Demo values: distance=0, tabletX=8.6, tabletZ=5.3, altitude=45, azimuth=242, barrelRotation=318
+        const demoDistance = 0;
+        const demoTiltAltitude = 45;
+        const demoTiltAzimuth = 242;
+        const demoBarrelRotation = 318;
+        const demoTabletX = 8.6;
+        const demoTabletZ = 5.3;
+        
+        // Update sliders
+        penDistanceSlider.value = demoDistance;
+        tiltAltitudeSlider.value = demoTiltAltitude;
+        tiltAzimuthSlider.value = demoTiltAzimuth;
+        barrelRotationSlider.value = demoBarrelRotation;
+        tabletPositionXSlider.value = demoTabletX;
+        tabletPositionZSlider.value = demoTabletZ;
+        
+        // Update displays
+        distanceValueDisplay.textContent = demoDistance.toFixed(1);
+        altitudeValueDisplay.textContent = demoTiltAltitude.toFixed(0);
+        azimuthValueDisplay.textContent = demoTiltAzimuth.toFixed(0);
+        barrelRotationValueDisplay.textContent = demoBarrelRotation.toFixed(0);
+        tabletPositionXValueDisplay.textContent = demoTabletX.toFixed(1);
+        tabletPositionZValueDisplay.textContent = demoTabletZ.toFixed(1);
+        
+        // Update azimuth slider state
+        updateAzimuthSliderState();
+        
+        // Enable annotations: altitude, azimuth, tilt X, tilt Y, and barrel rotation
+        document.getElementById('altitude-annotations').checked = true;
+        document.getElementById('azimuth-annotations').checked = true;
+        document.getElementById('tilt-x-annotations').checked = true;
+        document.getElementById('tilt-y-annotations').checked = true;
+        document.getElementById('barrel-annotations').checked = true;
+        
+        // Update pen transform and annotations
+        sim.setDistance(demoDistance);
+        sim.setTiltAltitude(demoTiltAltitude);
+        sim.setTiltAzimuth(demoTiltAzimuth);
+        sim.setBarrelRotation(demoBarrelRotation);
+        sim.setTabletPositionX(demoTabletX);
+        sim.setTabletPositionZ(demoTabletZ);
+        sim.setAltitudeAnnotationsVisible(true);
+        sim.setAzimuthAnnotationsVisible(true);
+        sim.setTiltXAnnotationsVisible(true);
+        sim.setTiltYAnnotationsVisible(true);
+        sim.setBarrelAnnotationsVisible(true);
+        
+        // Update tilt X and Y displays
+        const tiltResult = sim.setTiltAzimuth(demoTiltAzimuth);
+        document.getElementById('tilt-x-value').textContent = tiltResult.tiltX.toFixed(1);
+        document.getElementById('tilt-y-value').textContent = tiltResult.tiltY.toFixed(1);
+    });
+    
+    // Anim button
+    let cancelAnimation = null;
+    document.getElementById('anim-btn').addEventListener('click', () => {
+        // Cancel any existing animation
+        if (cancelAnimation) {
+            cancelAnimation();
+        }
+        
+        // Enable annotations at the start of animation
+        document.getElementById('altitude-annotations').checked = true;
+        document.getElementById('azimuth-annotations').checked = true;
+        document.getElementById('tilt-x-annotations').checked = true;
+        document.getElementById('tilt-y-annotations').checked = true;
+        document.getElementById('barrel-annotations').checked = true;
+        
+        sim.setAltitudeAnnotationsVisible(true);
+        sim.setAzimuthAnnotationsVisible(true);
+        sim.setTiltXAnnotationsVisible(true);
+        sim.setTiltYAnnotationsVisible(true);
+        sim.setBarrelAnnotationsVisible(true);
+        
+        // Reset to default position first
+        const defaults = sim.reset();
+        
+        // Update sliders and displays to defaults
+        penDistanceSlider.value = defaults.distance;
+        tiltAltitudeSlider.value = defaults.tiltAltitude;
+        tiltAzimuthSlider.value = defaults.tiltAzimuth;
+        barrelRotationSlider.value = defaults.barrelRotation;
+        tabletPositionXSlider.value = defaults.tabletX;
+        tabletPositionZSlider.value = defaults.tabletZ;
+        
+        distanceValueDisplay.textContent = defaults.distance.toFixed(1);
+        altitudeValueDisplay.textContent = defaults.tiltAltitude.toFixed(0);
+        azimuthValueDisplay.textContent = defaults.tiltAzimuth.toFixed(0);
+        barrelRotationValueDisplay.textContent = defaults.barrelRotation.toFixed(0);
+        tabletPositionXValueDisplay.textContent = defaults.tabletX.toFixed(1);
+        tabletPositionZValueDisplay.textContent = defaults.tabletZ.toFixed(1);
+        
+        updateAzimuthSliderState();
+        
+        // Set initial state
+        sim.setDistance(defaults.distance);
+        sim.setTiltAltitude(defaults.tiltAltitude);
+        sim.setTiltAzimuth(defaults.tiltAzimuth);
+        sim.setBarrelRotation(defaults.barrelRotation);
+        sim.setTabletPositionX(defaults.tabletX);
+        sim.setTabletPositionZ(defaults.tabletZ);
+        
+        // Start animation
+        cancelAnimation = sim.animateToDemo((current, progress) => {
+            // Update sliders and displays during animation
+            penDistanceSlider.value = current.distance;
+            tiltAltitudeSlider.value = current.tiltAltitude;
+            tiltAzimuthSlider.value = current.tiltAzimuth;
+            barrelRotationSlider.value = current.barrelRotation;
+            tabletPositionXSlider.value = current.tabletX;
+            tabletPositionZSlider.value = current.tabletZ;
+            
+            distanceValueDisplay.textContent = current.distance.toFixed(1);
+            altitudeValueDisplay.textContent = Math.round(current.tiltAltitude);
+            azimuthValueDisplay.textContent = Math.round(current.tiltAzimuth);
+            barrelRotationValueDisplay.textContent = Math.round(current.barrelRotation);
+            tabletPositionXValueDisplay.textContent = current.tabletX.toFixed(1);
+            tabletPositionZValueDisplay.textContent = current.tabletZ.toFixed(1);
+            
+            // Update tilt X and Y displays
+            const tiltResult = sim.setTiltAzimuth(current.tiltAzimuth);
+            document.getElementById('tilt-x-value').textContent = tiltResult.tiltX.toFixed(1);
+            document.getElementById('tilt-y-value').textContent = tiltResult.tiltY.toFixed(1);
+            
+            // Clean up when animation completes
+            if (progress >= 1) {
+                cancelAnimation = null;
+            }
+        });
+    });
+    
     // Export as PNG
     document.getElementById('export-btn').addEventListener('click', () => {
-        renderer.render(scene, camera);
-        const dataURL = renderer.domElement.toDataURL('image/png');
-
-        const link = document.createElement('a');
-        link.download = 'Pen3DSim-render.png';
-        link.href = dataURL;
-        link.click();
+        sim.exportAsPNG();
     });
 </script>
 </body>
