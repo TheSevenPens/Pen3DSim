@@ -24,8 +24,8 @@
     </div>
 
     <div class="control-group">
-        <label>Tilt altitude: <span class="slider-value"><span id="altitude-value">30</span>°</span></label>
-        <input type="range" id="tilt-altitude" min="0" max="60" step="1" value="30">
+        <label>Tilt altitude: <span class="slider-value"><span id="altitude-value">0</span>°</span></label>
+        <input type="range" id="tilt-altitude" min="0" max="60" step="1" value="0">
     </div>
 
     <div class="control-group">
@@ -48,14 +48,14 @@
 
     <div class="control-group">
         <label style="display: flex; align-items: center; gap: 8px;">
-            <input type="checkbox" id="azimuth-annotations" checked style="width: auto; margin: 0;">
+            <input type="checkbox" id="azimuth-annotations" style="width: auto; margin: 0;">
             <span>Tilt azimuth</span>
         </label>
     </div>
 
     <div class="control-group">
         <label style="display: flex; align-items: center; gap: 8px;">
-            <input type="checkbox" id="altitude-annotations" checked style="width: auto; margin: 0;">
+            <input type="checkbox" id="altitude-annotations" style="width: auto; margin: 0;">
             <span>Tilt altitude</span>
         </label>
     </div>
@@ -76,7 +76,7 @@
 
     <div class="control-group">
         <label style="display: flex; align-items: center; gap: 8px;">
-            <input type="checkbox" id="barrel-annotations" checked style="width: auto; margin: 0;">
+            <input type="checkbox" id="barrel-annotations" style="width: auto; margin: 0;">
             <span>Barrel rotation</span>
         </label>
     </div>
@@ -97,6 +97,7 @@
     </div>
 
 
+    <button id="reset-btn">Reset pen</button>
     <button id="export-btn">Export as PNG</button>
 </div>
 <div id="viewer">
@@ -677,13 +678,13 @@
     const penTipLineBottom = new THREE.Vector3();
 
         // Pen tilt parameters
-        let tiltAltitude = 30; // degrees
+        let tiltAltitude = 0; // degrees
         let tiltAzimuth = 0; // degrees
         let barrelRotation = 0; // degrees
         let tabletOffsetX = 8; // inches (0-16 range, centered at 8)
         let tabletOffsetZ = 4.5; // inches (0-9 range, centered at 4.5)
-        let showAltitudeAnnotations = true; // checkbox state
-        let showBarrelAnnotations = true; // checkbox state
+        let showAltitudeAnnotations = false; // checkbox state
+        let showBarrelAnnotations = false; // checkbox state
         let showTiltXAnnotations = false; // checkbox state (unchecked by default)
         let showTiltYAnnotations = false; // checkbox state (unchecked by default)
         
@@ -1344,6 +1345,9 @@
     
     // Tilt azimuth annotations visibility checkbox
     const azimuthAnnotationsCheckbox = document.getElementById('azimuth-annotations');
+    // Set initial visibility based on checkbox state (unchecked by default)
+    arcAnnotationGroup.visible = azimuthAnnotationsCheckbox.checked;
+    surfaceLine.visible = azimuthAnnotationsCheckbox.checked;
     azimuthAnnotationsCheckbox.addEventListener('change', (e) => {
         const isVisible = e.target.checked;
         arcAnnotationGroup.visible = isVisible;
@@ -1397,6 +1401,46 @@
         xLabel.visible = isVisible;
         yLabel.visible = isVisible;
         zLabel.visible = isVisible;
+    });
+
+    // Reset pen button
+    document.getElementById('reset-btn').addEventListener('click', () => {
+        // Reset to default values
+        const defaultDistance = 0;
+        const defaultTiltAltitude = 0;
+        const defaultTiltAzimuth = 0;
+        const defaultBarrelRotation = 0;
+        const defaultTabletX = 8;
+        const defaultTabletZ = 4.5;
+        
+        // Update variables
+        tiltAltitude = defaultTiltAltitude;
+        tiltAzimuth = defaultTiltAzimuth;
+        barrelRotation = defaultBarrelRotation;
+        tabletOffsetX = defaultTabletX;
+        tabletOffsetZ = defaultTabletZ;
+        
+        // Update sliders
+        penDistanceSlider.value = defaultDistance;
+        tiltAltitudeSlider.value = defaultTiltAltitude;
+        tiltAzimuthSlider.value = defaultTiltAzimuth;
+        barrelRotationSlider.value = defaultBarrelRotation;
+        tabletPositionXSlider.value = defaultTabletX;
+        tabletPositionZSlider.value = defaultTabletZ;
+        
+        // Update displays
+        distanceValueDisplay.textContent = defaultDistance.toFixed(1);
+        altitudeValueDisplay.textContent = defaultTiltAltitude.toFixed(0);
+        azimuthValueDisplay.textContent = defaultTiltAzimuth.toFixed(0);
+        barrelRotationValueDisplay.textContent = defaultBarrelRotation.toFixed(0);
+        tabletPositionXValueDisplay.textContent = defaultTabletX.toFixed(1);
+        tabletPositionZValueDisplay.textContent = defaultTabletZ.toFixed(1);
+        
+        // Update azimuth slider state (disabled when altitude is 0)
+        updateAzimuthSliderState();
+        
+        // Update pen transform
+        updatePenTransform(defaultDistance, defaultTiltAltitude, defaultTiltAzimuth, defaultBarrelRotation);
     });
 
     // Export as PNG

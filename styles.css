@@ -52,7 +52,7 @@ input[type="range"] {
     margin-bottom: 0;
 }
 
-#export-btn {
+#export-btn, #reset-btn {
     padding: 6px 6px;
     background: #4CAF50;
     color: white;
@@ -64,11 +64,11 @@ input[type="range"] {
     transition: background 0.3s;
 }
 
-#export-btn:hover {
+#export-btn:hover, #reset-btn:hover {
     background: #45a049;
 }
 
-#export-btn:active {
+#export-btn:active, #reset-btn:active {
     background: #3d8b40;
 }
 
