@@ -315,7 +315,7 @@
     penLineGeometry.setAttribute('position', new THREE.BufferAttribute(penLinePositions, 3));
 
     const penLineMaterial = new THREE.LineDashedMaterial({
-        color: 0x00ff00,
+        color: 0xffff00,
         dashSize: 0.2,
         gapSize: 0.1
     });
@@ -327,7 +327,12 @@
     const penTipLineGeometry = new THREE.BufferGeometry();
     penTipLineGeometry.setAttribute('position', new THREE.BufferAttribute(penTipLinePositions, 3));
 
-    const penTipLine = new THREE.Line(penTipLineGeometry, penLineMaterial);
+    const penTipLineMaterial = new THREE.LineDashedMaterial({
+        color: 0xffff00,
+        dashSize: 0.2,
+        gapSize: 0.1
+    });
+    const penTipLine = new THREE.Line(penTipLineGeometry, penTipLineMaterial);
     scene.add(penTipLine);
 
     // Arc annotation on tablet surface
@@ -768,6 +773,9 @@
                 penLinePositions[3] = penLineBottom.x;
                 penLinePositions[4] = penLineBottom.y;
                 penLinePositions[5] = penLineBottom.z;
+                
+                // Hide green dotted line from top of pen when tilt altitude is zero
+                penLine.visible = (altitude !== 0);
 
                 // Calculate actual pen tip position in world space
                 penTipWorld.copy(penTipLocal).applyMatrix4(penGroup.matrixWorld);
