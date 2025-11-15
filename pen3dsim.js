@@ -237,8 +237,8 @@ class Pen3DSim {
         
         const penLineMaterial = new THREE.LineDashedMaterial({
             color: 0xffff00,
-            dashSize: 0.2,
-            gapSize: 0.1
+            dashSize: 0.08,
+            gapSize: 0.05
         });
         this.penLine = new THREE.Line(this.penLineGeometry, penLineMaterial);
         this.scene.add(this.penLine);
@@ -250,8 +250,8 @@ class Pen3DSim {
         
         const penTipLineMaterial = new THREE.LineDashedMaterial({
             color: 0xffff00,
-            dashSize: 0.2,
-            gapSize: 0.1
+            dashSize: 0.08,
+            gapSize: 0.05
         });
         this.penTipLine = new THREE.Line(this.penTipLineGeometry, penTipLineMaterial);
         this.scene.add(this.penTipLine);
@@ -263,8 +263,8 @@ class Pen3DSim {
         
         const penAxisLineMaterial = new THREE.LineDashedMaterial({
             color: 0xffffff,
-            dashSize: 0.2,
-            gapSize: 0.1
+            dashSize: 0.08,
+            gapSize: 0.05
         });
         this.penAxisLine = new THREE.Line(this.penAxisLineGeometry, penAxisLineMaterial);
         this.scene.add(this.penAxisLine);
@@ -392,8 +392,8 @@ class Pen3DSim {
         
         const dottedArcMaterial = new THREE.LineDashedMaterial({ 
             color: 0x00ff00, 
-            dashSize: 0.1, 
-            gapSize: 0.1,
+            dashSize: 0.08, 
+            gapSize: 0.05,
             linewidth: 2 
         });
         const dottedArcGeometry = new THREE.BufferGeometry();
@@ -447,8 +447,8 @@ class Pen3DSim {
         
         const barrelDottedCircleMaterial = new THREE.LineDashedMaterial({ 
             color: 0xff8800, 
-            dashSize: 0.1, 
-            gapSize: 0.1,
+            dashSize: 0.08, 
+            gapSize: 0.05,
             linewidth: 2 
         });
         const barrelDottedCircleGeometry = new THREE.BufferGeometry();
@@ -487,8 +487,8 @@ class Pen3DSim {
         
         const fusciaSemicircleMaterial = new THREE.LineDashedMaterial({ 
             color: 0xff00ff, 
-            dashSize: 0.1, 
-            gapSize: 0.1,
+            dashSize: 0.08, 
+            gapSize: 0.05,
             linewidth: 2 
         });
         const fusciaSemicircleGeometry = new THREE.BufferGeometry();
@@ -517,8 +517,8 @@ class Pen3DSim {
         
         const tiltXDottedCircleMaterial = new THREE.LineDashedMaterial({ 
             color: 0x88ccff, 
-            dashSize: 0.1, 
-            gapSize: 0.1,
+            dashSize: 0.08, 
+            gapSize: 0.05,
             linewidth: 2 
         });
         const tiltXDottedCircleGeometry = new THREE.BufferGeometry();
@@ -547,8 +547,8 @@ class Pen3DSim {
         
         const tiltYDottedCircleMaterial = new THREE.LineDashedMaterial({ 
             color: 0xff88cc, 
-            dashSize: 0.1, 
-            gapSize: 0.1,
+            dashSize: 0.08, 
+            gapSize: 0.05,
             linewidth: 2 
         });
         const tiltYDottedCircleGeometry = new THREE.BufferGeometry();
