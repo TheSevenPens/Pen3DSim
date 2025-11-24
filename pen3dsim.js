@@ -235,11 +235,7 @@ class Pen3DSim {
         this.penLineGeometry = new THREE.BufferGeometry();
         this.penLineGeometry.setAttribute('position', new THREE.BufferAttribute(this.penLinePositions, 3));
         
-        const penLineMaterial = new THREE.LineDashedMaterial({
-            color: 0xffff00,
-            dashSize: 0.08,
-            gapSize: 0.05
-        });
+        const penLineMaterial = this.createDashedLineMaterial(0xffff00);
         this.penLine = new THREE.Line(this.penLineGeometry, penLineMaterial);
         this.scene.add(this.penLine);
         
@@ -248,11 +244,7 @@ class Pen3DSim {
         this.penTipLineGeometry = new THREE.BufferGeometry();
         this.penTipLineGeometry.setAttribute('position', new THREE.BufferAttribute(this.penTipLinePositions, 3));
         
-        const penTipLineMaterial = new THREE.LineDashedMaterial({
-            color: 0xffff00,
-            dashSize: 0.08,
-            gapSize: 0.05
-        });
+        const penTipLineMaterial = this.createDashedLineMaterial(0xffff00);
         this.penTipLine = new THREE.Line(this.penTipLineGeometry, penTipLineMaterial);
         this.scene.add(this.penTipLine);
         
@@ -261,11 +253,7 @@ class Pen3DSim {
         this.penAxisLineGeometry = new THREE.BufferGeometry();
         this.penAxisLineGeometry.setAttribute('position', new THREE.BufferAttribute(this.penAxisLinePositions, 3));
         
-        const penAxisLineMaterial = new THREE.LineDashedMaterial({
-            color: 0xffffff,
-            dashSize: 0.08,
-            gapSize: 0.05
-        });
+        const penAxisLineMaterial = this.createDashedLineMaterial(0xffffff);
         this.penAxisLine = new THREE.Line(this.penAxisLineGeometry, penAxisLineMaterial);
         this.scene.add(this.penAxisLine);
         
@@ -390,12 +378,7 @@ class Pen3DSim {
         arrowLine.visible = false;
         this.arcAnnotationGroup.add(arrowLine);
         
-        const dottedArcMaterial = new THREE.LineDashedMaterial({ 
-            color: 0x00ff00, 
-            dashSize: 0.08, 
-            gapSize: 0.05,
-            linewidth: 2 
-        });
+        const dottedArcMaterial = this.createDashedLineMaterial(0x00ff00, 2);
         const dottedArcGeometry = new THREE.BufferGeometry();
         this.dottedArcLine = new THREE.Line(dottedArcGeometry, dottedArcMaterial);
         this.arcAnnotationGroup.add(this.dottedArcLine);
@@ -445,12 +428,7 @@ class Pen3DSim {
         barrelSurfaceArrowLine.visible = false;
         this.barrelAnnotationGroup.add(barrelSurfaceArrowLine);
         
-        const barrelDottedCircleMaterial = new THREE.LineDashedMaterial({ 
-            color: 0xff8800, 
-            dashSize: 0.08, 
-            gapSize: 0.05,
-            linewidth: 2 
-        });
+        const barrelDottedCircleMaterial = this.createDashedLineMaterial(0xff8800, 2);
         const barrelDottedCircleGeometry = new THREE.BufferGeometry();
         this.barrelDottedCircleLine = new THREE.Line(barrelDottedCircleGeometry, barrelDottedCircleMaterial);
         this.barrelAnnotationGroup.add(this.barrelDottedCircleLine);
@@ -485,12 +463,7 @@ class Pen3DSim {
         this.fusciaVerticalLine = new THREE.Line(fusciaVerticalLineGeometry, fusciaVerticalLineMaterial);
         this.scene.add(this.fusciaVerticalLine);
         
-        const fusciaSemicircleMaterial = new THREE.LineDashedMaterial({ 
-            color: 0xff00ff, 
-            dashSize: 0.08, 
-            gapSize: 0.05,
-            linewidth: 2 
-        });
+        const fusciaSemicircleMaterial = this.createDashedLineMaterial(0xff00ff, 2);
         const fusciaSemicircleGeometry = new THREE.BufferGeometry();
         this.fusciaSemicircleLine = new THREE.Line(fusciaSemicircleGeometry, fusciaSemicircleMaterial);
         this.scene.add(this.fusciaSemicircleLine);
@@ -515,12 +488,7 @@ class Pen3DSim {
         this.tiltXVerticalLine = new THREE.Line(tiltXVerticalLineGeometry, tiltXVerticalLineMaterial);
         this.scene.add(this.tiltXVerticalLine);
         
-        const tiltXDottedCircleMaterial = new THREE.LineDashedMaterial({ 
-            color: 0x88ccff, 
-            dashSize: 0.08, 
-            gapSize: 0.05,
-            linewidth: 2 
-        });
+        const tiltXDottedCircleMaterial = this.createDashedLineMaterial(0x88ccff, 2);
         const tiltXDottedCircleGeometry = new THREE.BufferGeometry();
         this.tiltXDottedCircleLine = new THREE.Line(tiltXDottedCircleGeometry, tiltXDottedCircleMaterial);
         this.scene.add(this.tiltXDottedCircleLine);
@@ -545,12 +513,7 @@ class Pen3DSim {
         this.tiltYVerticalLine = new THREE.Line(tiltYVerticalLineGeometry, tiltYVerticalLineMaterial);
         this.scene.add(this.tiltYVerticalLine);
         
-        const tiltYDottedCircleMaterial = new THREE.LineDashedMaterial({ 
-            color: 0xff88cc, 
-            dashSize: 0.08, 
-            gapSize: 0.05,
-            linewidth: 2 
-        });
+        const tiltYDottedCircleMaterial = this.createDashedLineMaterial(0xff88cc, 2);
         const tiltYDottedCircleGeometry = new THREE.BufferGeometry();
         this.tiltYDottedCircleLine = new THREE.Line(tiltYDottedCircleGeometry, tiltYDottedCircleMaterial);
         this.scene.add(this.tiltYDottedCircleLine);
@@ -823,6 +786,73 @@ class Pen3DSim {
         return (tiltYRad * 180) / Math.PI;
     }
     
+    // Shared code helper methods
+    createDashedLineMaterial(color, linewidth = 2) {
+        return new THREE.LineDashedMaterial({ 
+            color: color, 
+            dashSize: 0.08, 
+            gapSize: 0.05,
+            linewidth: linewidth 
+        });
+    }
+    
+    calculatePieRotationQuaternion(u, v) {
+        const uNorm = u.clone().normalize();
+        const vNorm = v.clone().normalize();
+        const normal = new THREE.Vector3().crossVectors(uNorm, vNorm).normalize();
+        
+        const xAxis = new THREE.Vector3(1, 0, 0);
+        const zAxis = new THREE.Vector3(0, 0, 1);
+        
+        const zToNormalQuat = new THREE.Quaternion();
+        zToNormalQuat.setFromUnitVectors(zAxis, normal);
+        
+        const xAfterZRot = xAxis.clone().applyQuaternion(zToNormalQuat);
+        const xInPlane = xAfterZRot.clone().sub(normal.clone().multiplyScalar(xAfterZRot.dot(normal))).normalize();
+        const angleToU = Math.acos(Math.max(-1, Math.min(1, xInPlane.dot(uNorm))));
+        const cross = new THREE.Vector3().crossVectors(xInPlane, uNorm);
+        const sign = cross.dot(normal) >= 0 ? 1 : -1;
+        const alignQuat = new THREE.Quaternion().setFromAxisAngle(normal, sign * angleToU);
+        
+        const pieRotationQuat = new THREE.Quaternion();
+        pieRotationQuat.multiplyQuaternions(alignQuat, zToNormalQuat);
+        return pieRotationQuat;
+    }
+    
+    updateVerticalLine(line, startPoint, endPoint) {
+        line.geometry.setFromPoints([startPoint, endPoint]);
+        line.geometry.attributes.position.needsUpdate = true;
+        line.visible = true;
+    }
+    
+    updateArcWithTube(arcLine, center, u, v, radius, startAngle, endAngle, segments = 32) {
+        const points = this.createCircularArcInPlane(center, u, v, radius, startAngle, endAngle, segments);
+        const curve = this.createCurveFromPoints(points);
+        const tubeGeometry = new THREE.TubeGeometry(curve, segments, 0.02, 8, false);
+        if (arcLine.geometry) {
+            arcLine.geometry.dispose();
+        }
+        arcLine.geometry = tubeGeometry;
+        arcLine.visible = true;
+    }
+    
+    cleanupPieMesh(pieMesh, parent) {
+        if (pieMesh) {
+            parent.remove(pieMesh);
+            if (pieMesh.geometry) pieMesh.geometry.dispose();
+            return null;
+        }
+        return null;
+    }
+    
+    updateDottedCircle(line, center, u, v, radius, segments = 64) {
+        const points = this.createCircularArcInPlane(center, u, v, radius, 0, 2 * Math.PI, segments);
+        line.geometry.setFromPoints(points);
+        line.geometry.attributes.position.needsUpdate = true;
+        line.computeLineDistances();
+        line.visible = true;
+    }
+    
     // Main update function - this is the core of the simulation
     updatePenTransform(distance, altitude, azimuth, barrel) {
         const tabletTopY = 0.05;
@@ -931,27 +961,11 @@ class Pen3DSim {
         
         if (altitude !== 0 && this.showAltitudeAnnotations) {
             const arcStartPoint = arcCenter.clone().add(fusciaU.clone().multiplyScalar(arcRadius));
-            const fusciaVerticalLinePoints = [
-                this.penTipWorld.clone(),
-                arcStartPoint
-            ];
-            this.fusciaVerticalLine.geometry.setFromPoints(fusciaVerticalLinePoints);
-            this.fusciaVerticalLine.geometry.attributes.position.needsUpdate = true;
-            this.fusciaVerticalLine.visible = true;
+            this.updateVerticalLine(this.fusciaVerticalLine, this.penTipWorld.clone(), arcStartPoint);
             
-            const fusciaArcPoints = this.createCircularArcInPlane(arcCenter, fusciaU, fusciaV, arcRadius, fusciaStartAngle, fusciaEndAngle, 32);
-            const fusciaArcCurve = this.createCurveFromPoints(fusciaArcPoints);
-            const fusciaTubeGeometry = new THREE.TubeGeometry(fusciaArcCurve, 32, 0.02, 8, false);
-            if (this.fusciaArcLine.geometry) {
-                this.fusciaArcLine.geometry.dispose();
-            }
-            this.fusciaArcLine.geometry = fusciaTubeGeometry;
-            this.fusciaArcLine.visible = true;
+            this.updateArcWithTube(this.fusciaArcLine, arcCenter, fusciaU, fusciaV, arcRadius, fusciaStartAngle, fusciaEndAngle, 32);
             
-            if (this.fusciaPieMesh) {
-                this.scene.remove(this.fusciaPieMesh);
-                if (this.fusciaPieMesh.geometry) this.fusciaPieMesh.geometry.dispose();
-            }
+            this.fusciaPieMesh = this.cleanupPieMesh(this.fusciaPieMesh, this.scene);
             const fusciaPieShape = new THREE.Shape();
             fusciaPieShape.moveTo(0, 0);
             const fusciaPieSegments = 32;
@@ -966,43 +980,15 @@ class Pen3DSim {
             this.fusciaPieMesh = new THREE.Mesh(fusciaPieGeometry, this.fusciaPieMaterial);
             this.fusciaPieMesh.position.copy(arcCenter);
             
-            const fusciaUNorm = fusciaU.clone().normalize();
-            const fusciaVNorm = fusciaV.clone().normalize();
-            const fusciaNormal = new THREE.Vector3().crossVectors(fusciaUNorm, fusciaVNorm).normalize();
-            
-            const xAxis = new THREE.Vector3(1, 0, 0);
-            const zAxis = new THREE.Vector3(0, 0, 1);
-            
-            const zToNormalQuat = new THREE.Quaternion();
-            zToNormalQuat.setFromUnitVectors(zAxis, fusciaNormal);
-            
-            const xAfterZRot = xAxis.clone().applyQuaternion(zToNormalQuat);
-            const xInPlane = xAfterZRot.clone().sub(fusciaNormal.clone().multiplyScalar(xAfterZRot.dot(fusciaNormal))).normalize();
-            const angleToU = Math.acos(Math.max(-1, Math.min(1, xInPlane.dot(fusciaUNorm))));
-            const cross = new THREE.Vector3().crossVectors(xInPlane, fusciaUNorm);
-            const sign = cross.dot(fusciaNormal) >= 0 ? 1 : -1;
-            const alignQuat = new THREE.Quaternion().setFromAxisAngle(fusciaNormal, sign * angleToU);
-            
-            const fusciaPieRotationQuat = new THREE.Quaternion();
-            fusciaPieRotationQuat.multiplyQuaternions(alignQuat, zToNormalQuat);
-            this.fusciaPieMesh.setRotationFromQuaternion(fusciaPieRotationQuat);
+            this.fusciaPieMesh.setRotationFromQuaternion(this.calculatePieRotationQuaternion(fusciaU, fusciaV));
             this.scene.add(this.fusciaPieMesh);
             
-            const fusciaCircleSegments = 64;
-            const fusciaCirclePoints = this.createCircularArcInPlane(arcCenter, fusciaU, fusciaV, arcRadius, 0, 2 * Math.PI, fusciaCircleSegments);
-            this.fusciaSemicircleLine.geometry.setFromPoints(fusciaCirclePoints);
-            this.fusciaSemicircleLine.geometry.attributes.position.needsUpdate = true;
-            this.fusciaSemicircleLine.computeLineDistances();
-            this.fusciaSemicircleLine.visible = true;
+            this.updateDottedCircle(this.fusciaSemicircleLine, arcCenter, fusciaU, fusciaV, arcRadius, 64);
         } else {
             this.fusciaVerticalLine.visible = false;
             this.fusciaArcLine.visible = false;
             this.fusciaSemicircleLine.visible = false;
-            if (this.fusciaPieMesh) {
-                this.scene.remove(this.fusciaPieMesh);
-                if (this.fusciaPieMesh.geometry) this.fusciaPieMesh.geometry.dispose();
-                this.fusciaPieMesh = null;
-            }
+            this.fusciaPieMesh = this.cleanupPieMesh(this.fusciaPieMesh, this.scene);
         }
         
         const tiltX = this.calculateTiltX(altitude, azimuth);
@@ -1019,45 +1005,21 @@ class Pen3DSim {
             const tiltXEndAngle = (tiltX * Math.PI) / 180;
             
             const tiltXArcStartPoint = tiltXArcCenter.clone().add(tiltXU.clone().multiplyScalar(tiltXArcRadius));
-            const tiltXVerticalLinePoints = [
-                this.penTipWorld.clone(),
-                tiltXArcStartPoint
-            ];
-            this.tiltXVerticalLine.geometry.setFromPoints(tiltXVerticalLinePoints);
-            this.tiltXVerticalLine.geometry.attributes.position.needsUpdate = true;
-            this.tiltXVerticalLine.visible = true;
+            this.updateVerticalLine(this.tiltXVerticalLine, this.penTipWorld.clone(), tiltXArcStartPoint);
             
-            const tiltXArcPoints = this.createCircularArcInPlane(tiltXArcCenter, tiltXU, tiltXV, tiltXArcRadius, tiltXStartAngle, tiltXEndAngle, 32);
-            const tiltXArcCurve = this.createCurveFromPoints(tiltXArcPoints);
-            const tiltXTubeGeometry = new THREE.TubeGeometry(tiltXArcCurve, 32, 0.02, 8, false);
-            if (this.tiltXArcLine.geometry) {
-                this.tiltXArcLine.geometry.dispose();
-            }
-            this.tiltXArcLine.geometry = tiltXTubeGeometry;
-            this.tiltXArcLine.visible = true;
+            this.updateArcWithTube(this.tiltXArcLine, tiltXArcCenter, tiltXU, tiltXV, tiltXArcRadius, tiltXStartAngle, tiltXEndAngle, 32);
             
-            if (this.tiltXPieMesh) {
-                this.scene.remove(this.tiltXPieMesh);
-                if (this.tiltXPieMesh.geometry) this.tiltXPieMesh.geometry.dispose();
-            }
+            this.tiltXPieMesh = this.cleanupPieMesh(this.tiltXPieMesh, this.scene);
             this.tiltXPieMesh = this.createPieShapeInPlane(tiltXArcCenter, tiltXU, tiltXV, tiltXArcRadius, tiltXStartAngle, tiltXEndAngle, 32);
             this.tiltXPieMesh.material = this.tiltXPieMaterial;
             this.scene.add(this.tiltXPieMesh);
             
-            const tiltXCirclePoints = this.createCircularArcInPlane(tiltXArcCenter, tiltXU, tiltXV, tiltXArcRadius, 0, 2 * Math.PI, 64);
-            this.tiltXDottedCircleLine.geometry.setFromPoints(tiltXCirclePoints);
-            this.tiltXDottedCircleLine.geometry.attributes.position.needsUpdate = true;
-            this.tiltXDottedCircleLine.computeLineDistances();
-            this.tiltXDottedCircleLine.visible = true;
+            this.updateDottedCircle(this.tiltXDottedCircleLine, tiltXArcCenter, tiltXU, tiltXV, tiltXArcRadius, 64);
         } else {
             this.tiltXVerticalLine.visible = false;
             this.tiltXArcLine.visible = false;
             this.tiltXDottedCircleLine.visible = false;
-            if (this.tiltXPieMesh) {
-                this.scene.remove(this.tiltXPieMesh);
-                if (this.tiltXPieMesh.geometry) this.tiltXPieMesh.geometry.dispose();
-                this.tiltXPieMesh = null;
-            }
+            this.tiltXPieMesh = this.cleanupPieMesh(this.tiltXPieMesh, this.scene);
         }
         
         // Update tilt Y annotation
@@ -1071,27 +1033,11 @@ class Pen3DSim {
             const tiltYEndAngle = (tiltY * Math.PI) / 180;
             
             const tiltYArcStartPoint = tiltYArcCenter.clone().add(tiltYU.clone().multiplyScalar(tiltYArcRadius));
-            const tiltYVerticalLinePoints = [
-                this.penTipWorld.clone(),
-                tiltYArcStartPoint
-            ];
-            this.tiltYVerticalLine.geometry.setFromPoints(tiltYVerticalLinePoints);
-            this.tiltYVerticalLine.geometry.attributes.position.needsUpdate = true;
-            this.tiltYVerticalLine.visible = true;
+            this.updateVerticalLine(this.tiltYVerticalLine, this.penTipWorld.clone(), tiltYArcStartPoint);
             
-            const tiltYArcPoints = this.createCircularArcInPlane(tiltYArcCenter, tiltYU, tiltYV, tiltYArcRadius, tiltYStartAngle, tiltYEndAngle, 32);
-            const tiltYArcCurve = this.createCurveFromPoints(tiltYArcPoints);
-            const tiltYTubeGeometry = new THREE.TubeGeometry(tiltYArcCurve, 32, 0.02, 8, false);
-            if (this.tiltYArcLine.geometry) {
-                this.tiltYArcLine.geometry.dispose();
-            }
-            this.tiltYArcLine.geometry = tiltYTubeGeometry;
-            this.tiltYArcLine.visible = true;
+            this.updateArcWithTube(this.tiltYArcLine, tiltYArcCenter, tiltYU, tiltYV, tiltYArcRadius, tiltYStartAngle, tiltYEndAngle, 32);
             
-            if (this.tiltYPieMesh) {
-                this.scene.remove(this.tiltYPieMesh);
-                if (this.tiltYPieMesh.geometry) this.tiltYPieMesh.geometry.dispose();
-            }
+            this.tiltYPieMesh = this.cleanupPieMesh(this.tiltYPieMesh, this.scene);
             const tiltYPieShape = new THREE.Shape();
             tiltYPieShape.moveTo(0, 0);
             const tiltYPieSegments = 32;
@@ -1106,42 +1052,15 @@ class Pen3DSim {
             this.tiltYPieMesh = new THREE.Mesh(tiltYPieGeometry, this.tiltYPieMaterial);
             this.tiltYPieMesh.position.copy(tiltYArcCenter);
             
-            const tiltYUNorm = tiltYU.clone().normalize();
-            const tiltYVNorm = tiltYV.clone().normalize();
-            const tiltYNormal = new THREE.Vector3().crossVectors(tiltYUNorm, tiltYVNorm).normalize();
-            
-            const xAxis = new THREE.Vector3(1, 0, 0);
-            const zAxis = new THREE.Vector3(0, 0, 1);
-            
-            const zToNormalQuat = new THREE.Quaternion();
-            zToNormalQuat.setFromUnitVectors(zAxis, tiltYNormal);
-            
-            const xAfterZRot = xAxis.clone().applyQuaternion(zToNormalQuat);
-            const xInPlane = xAfterZRot.clone().sub(tiltYNormal.clone().multiplyScalar(xAfterZRot.dot(tiltYNormal))).normalize();
-            const angleToU = Math.acos(Math.max(-1, Math.min(1, xInPlane.dot(tiltYUNorm))));
-            const cross = new THREE.Vector3().crossVectors(xInPlane, tiltYUNorm);
-            const sign = cross.dot(tiltYNormal) >= 0 ? 1 : -1;
-            const alignQuat = new THREE.Quaternion().setFromAxisAngle(tiltYNormal, sign * angleToU);
-            
-            const tiltYPieRotationQuat = new THREE.Quaternion();
-            tiltYPieRotationQuat.multiplyQuaternions(alignQuat, zToNormalQuat);
-            this.tiltYPieMesh.setRotationFromQuaternion(tiltYPieRotationQuat);
+            this.tiltYPieMesh.setRotationFromQuaternion(this.calculatePieRotationQuaternion(tiltYU, tiltYV));
             this.scene.add(this.tiltYPieMesh);
             
-            const tiltYCirclePoints = this.createCircularArcInPlane(tiltYArcCenter, tiltYU, tiltYV, tiltYArcRadius, 0, 2 * Math.PI, 64);
-            this.tiltYDottedCircleLine.geometry.setFromPoints(tiltYCirclePoints);
-            this.tiltYDottedCircleLine.geometry.attributes.position.needsUpdate = true;
-            this.tiltYDottedCircleLine.computeLineDistances();
-            this.tiltYDottedCircleLine.visible = true;
+            this.updateDottedCircle(this.tiltYDottedCircleLine, tiltYArcCenter, tiltYU, tiltYV, tiltYArcRadius, 64);
         } else {
             this.tiltYVerticalLine.visible = false;
             this.tiltYArcLine.visible = false;
             this.tiltYDottedCircleLine.visible = false;
-            if (this.tiltYPieMesh) {
-                this.scene.remove(this.tiltYPieMesh);
-                if (this.tiltYPieMesh.geometry) this.tiltYPieMesh.geometry.dispose();
-                this.tiltYPieMesh = null;
-            }
+            this.tiltYPieMesh = this.cleanupPieMesh(this.tiltYPieMesh, this.scene);
         }
         
         this.penTipLinePositions[0] = this.penTipWorld.x;
@@ -1235,10 +1154,7 @@ class Pen3DSim {
             this.arcLine.geometry = tubeGeometry;
             this.arcLine.visible = true;
             
-            if (this.arcPieMesh) {
-                this.arcAnnotationGroup.remove(this.arcPieMesh);
-                if (this.arcPieMesh.geometry) this.arcPieMesh.geometry.dispose();
-            }
+            this.arcPieMesh = this.cleanupPieMesh(this.arcPieMesh, this.arcAnnotationGroup);
             const pieStartAngle = startAngle;
             const pieEndAngle = endAngle;
             const azimuthPieShape = new THREE.Shape();
@@ -1257,11 +1173,7 @@ class Pen3DSim {
             this.arcAnnotationGroup.add(this.arcPieMesh);
         } else {
             this.arcLine.visible = false;
-            if (this.arcPieMesh) {
-                this.arcAnnotationGroup.remove(this.arcPieMesh);
-                if (this.arcPieMesh.geometry) this.arcPieMesh.geometry.dispose();
-                this.arcPieMesh = null;
-            }
+            this.arcPieMesh = this.cleanupPieMesh(this.arcPieMesh, this.arcAnnotationGroup);
         }
         
         // Update barrel rotation annotations
@@ -1291,10 +1203,7 @@ class Pen3DSim {
                 this.barrelArcLine.geometry = barrelTubeGeometry;
                 this.barrelArcLine.visible = true;
                 
-                if (this.barrelPieMesh) {
-                    this.barrelAnnotationGroup.remove(this.barrelPieMesh);
-                    if (this.barrelPieMesh.geometry) this.barrelPieMesh.geometry.dispose();
-                }
+                this.barrelPieMesh = this.cleanupPieMesh(this.barrelPieMesh, this.barrelAnnotationGroup);
                 const pieStartAngle = (barrelStartAngle - Math.PI) - Math.PI;
                 const pieEndAngle = (barrelEndAngle - Math.PI) - Math.PI;
                 const pieShape = new THREE.Shape();
@@ -1311,34 +1220,11 @@ class Pen3DSim {
                 this.barrelPieMesh = new THREE.Mesh(pieGeometry, this.barrelPieMaterial);
                 this.barrelPieMesh.position.copy(barrelCenter);
                 
-                const uNorm = u.clone().normalize();
-                const vNorm = v.clone().normalize();
-                const normal = new THREE.Vector3().crossVectors(uNorm, vNorm).normalize();
-                
-                const xAxis = new THREE.Vector3(1, 0, 0);
-                const zAxis = new THREE.Vector3(0, 0, 1);
-                
-                const zToNormalQuat = new THREE.Quaternion();
-                zToNormalQuat.setFromUnitVectors(zAxis, normal);
-                
-                const xAfterZRot = xAxis.clone().applyQuaternion(zToNormalQuat);
-                const xInPlane = xAfterZRot.clone().sub(normal.clone().multiplyScalar(xAfterZRot.dot(normal))).normalize();
-                const angleToU = Math.acos(Math.max(-1, Math.min(1, xInPlane.dot(uNorm))));
-                const cross = new THREE.Vector3().crossVectors(xInPlane, uNorm);
-                const sign = cross.dot(normal) >= 0 ? 1 : -1;
-                const alignQuat = new THREE.Quaternion().setFromAxisAngle(normal, sign * angleToU);
-                
-                const pieRotationQuat = new THREE.Quaternion();
-                pieRotationQuat.multiplyQuaternions(alignQuat, zToNormalQuat);
-                this.barrelPieMesh.setRotationFromQuaternion(pieRotationQuat);
+                this.barrelPieMesh.setRotationFromQuaternion(this.calculatePieRotationQuaternion(u, v));
                 this.barrelAnnotationGroup.add(this.barrelPieMesh);
             } else {
                 this.barrelArcLine.visible = false;
-                if (this.barrelPieMesh) {
-                    this.barrelAnnotationGroup.remove(this.barrelPieMesh);
-                    if (this.barrelPieMesh.geometry) this.barrelPieMesh.geometry.dispose();
-                    this.barrelPieMesh = null;
-                }
+                this.barrelPieMesh = this.cleanupPieMesh(this.barrelPieMesh, this.barrelAnnotationGroup);
             }
             
             const barrelDottedCircleSegments = 64;
@@ -1364,11 +1250,7 @@ class Pen3DSim {
             this.barrelArcLine.visible = false;
             this.barrelDottedCircleLine.visible = false;
             this.barrelSurfaceLine.visible = false;
-            if (this.barrelPieMesh) {
-                this.barrelAnnotationGroup.remove(this.barrelPieMesh);
-                if (this.barrelPieMesh.geometry) this.barrelPieMesh.geometry.dispose();
-                this.barrelPieMesh = null;
-            }
+            this.barrelPieMesh = this.cleanupPieMesh(this.barrelPieMesh, this.barrelAnnotationGroup);
         }
     }
     
