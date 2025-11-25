@@ -1452,8 +1452,8 @@ class Pen3DSim {
             tiltAltitude: 45,
             tiltAzimuth: 242,
             barrelRotation: 318,
-            tabletX: 8.6,
-            tabletZ: 5.3
+            tabletX: 8,
+            tabletZ: 4.5
         };
         
         const duration = 8000; // 8 seconds
