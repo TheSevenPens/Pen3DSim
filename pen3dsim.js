@@ -954,11 +954,29 @@ class Pen3DSim {
         
         const fusciaU = verticalDir.clone().normalize();
         const penAxisProjected = penAxisDir.clone().sub(fusciaU.clone().multiplyScalar(penAxisDir.dot(fusciaU)));
-        const fusciaV = penAxisProjected.length() > 0.001 ? penAxisProjected.normalize() : new THREE.Vector3(1, 0, 0).applyQuaternion(quaternion).normalize();
+        
+        // Calculate fusciaV based on pen axis projection when altitude is non-zero,
+        // or based on azimuth direction when altitude is zero (to maintain consistent orientation)
+        let fusciaV;
+        if (penAxisProjected.length() > 0.001) {
+            fusciaV = penAxisProjected.normalize();
+        } else {
+            // When altitude is 0, use azimuth direction to maintain consistent circle orientation
+            // azimuthRad is already calculated at the start of this function
+            fusciaV = new THREE.Vector3(Math.sin(azimuthRad), 0, Math.cos(azimuthRad)).normalize();
+        }
         
         const fusciaStartAngle = 0;
         const fusciaEndAngle = Math.atan2(penAxisDir.dot(fusciaV), penAxisDir.dot(fusciaU));
         
+        // Always show dotted circle when annotations are enabled
+        if (this.showAltitudeAnnotations) {
+            this.updateDottedCircle(this.fusciaSemicircleLine, arcCenter, fusciaU, fusciaV, arcRadius, 64);
+        } else {
+            this.fusciaSemicircleLine.visible = false;
+        }
+        
+        // Show other annotation elements only when altitude is non-zero
         if (altitude !== 0 && this.showAltitudeAnnotations) {
             const arcStartPoint = arcCenter.clone().add(fusciaU.clone().multiplyScalar(arcRadius));
             this.updateVerticalLine(this.fusciaVerticalLine, this.penTipWorld.clone(), arcStartPoint);
@@ -982,12 +1000,9 @@ class Pen3DSim {
             
             this.fusciaPieMesh.setRotationFromQuaternion(this.calculatePieRotationQuaternion(fusciaU, fusciaV));
             this.scene.add(this.fusciaPieMesh);
-            
-            this.updateDottedCircle(this.fusciaSemicircleLine, arcCenter, fusciaU, fusciaV, arcRadius, 64);
         } else {
             this.fusciaVerticalLine.visible = false;
             this.fusciaArcLine.visible = false;
-            this.fusciaSemicircleLine.visible = false;
             this.fusciaPieMesh = this.cleanupPieMesh(this.fusciaPieMesh, this.scene);
         }
         
