@@ -221,6 +221,7 @@ class Pen3DSim {
         penTip.rotation.x = Math.PI;
         penTip.position.y = -tipHeight / 2;
         this.penGroup.add(penTip);
+        this.penTipMesh = penTip; // Store reference for shadow control
         
         const barrelHeight = 4;
         const barrelGeometry = new THREE.CylinderGeometry(0.15, 0.15, barrelHeight, 16);
@@ -237,6 +238,7 @@ class Pen3DSim {
         penBarrel.castShadow = true;
         penBarrel.position.y = barrelHeight / 2;
         this.penGroup.add(penBarrel);
+        this.penBarrelMesh = penBarrel; // Store reference for shadow control
         
         this.penGroup.position.set(0, 0, 0);
         this.scene.add(this.penGroup);
@@ -1385,6 +1387,15 @@ class Pen3DSim {
     setCursorVisible(visible) {
         if (this.cursorArrow) {
             this.cursorArrow.visible = visible;
+        }
+    }
+    
+    setPenShadowVisible(visible) {
+        if (this.penTipMesh) {
+            this.penTipMesh.castShadow = visible;
+        }
+        if (this.penBarrelMesh) {
+            this.penBarrelMesh.castShadow = visible;
         }
     }
     

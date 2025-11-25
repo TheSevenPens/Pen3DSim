@@ -128,6 +128,13 @@
                     <span>Mouse cursor</span>
                 </label>
             </div>
+
+            <div class="control-group">
+                <label style="display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox" id="pen-shadow-visible" style="width: auto; margin: 0;" checked>
+                    <span>Pen shadow</span>
+                </label>
+            </div>
         </div>
     </div>
 
@@ -330,6 +337,13 @@
         sim.setCursorVisible(e.target.checked);
     });
     
+    // Pen shadow visibility checkbox
+    const penShadowVisibleCheckbox = document.getElementById('pen-shadow-visible');
+    sim.setPenShadowVisible(penShadowVisibleCheckbox.checked);
+    penShadowVisibleCheckbox.addEventListener('change', (e) => {
+        sim.setPenShadowVisible(e.target.checked);
+    });
+    
     // All annotations on/off buttons
     document.getElementById('annotations-all-on-btn').addEventListener('click', () => {
         altitudeAnnotationsCheckbox.checked = true;
@@ -339,6 +353,7 @@
         barrelAnnotationsCheckbox.checked = true;
         axisMarkersCheckbox.checked = true;
         cursorVisibleCheckbox.checked = true;
+        penShadowVisibleCheckbox.checked = true;
         
         sim.setAltitudeAnnotationsVisible(true);
         sim.setAzimuthAnnotationsVisible(true);
@@ -347,6 +362,7 @@
         sim.setBarrelAnnotationsVisible(true);
         sim.setAxisMarkersVisible(true);
         sim.setCursorVisible(true);
+        sim.setPenShadowVisible(true);
     });
     
     document.getElementById('annotations-all-off-btn').addEventListener('click', () => {
@@ -357,6 +373,7 @@
         barrelAnnotationsCheckbox.checked = false;
         axisMarkersCheckbox.checked = false;
         cursorVisibleCheckbox.checked = false;
+        penShadowVisibleCheckbox.checked = false;
         
         sim.setAltitudeAnnotationsVisible(false);
         sim.setAzimuthAnnotationsVisible(false);
@@ -365,6 +382,7 @@
         sim.setBarrelAnnotationsVisible(false);
         sim.setAxisMarkersVisible(false);
         sim.setCursorVisible(false);
+        sim.setPenShadowVisible(false);
     });
     
     // Reset pen button
