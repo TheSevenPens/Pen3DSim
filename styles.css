@@ -104,3 +104,15 @@ input[type="checkbox"] {
     accent-color: #4CAF50;
 }
 
+.checkbox-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    margin-top: 2px;
+    margin-bottom: 6px;
+}
+
+.checkbox-grid .control-group {
+    margin: 0;
+}
+
