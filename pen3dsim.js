@@ -55,7 +55,13 @@ class Pen3DSim {
         const cameraFar = 1000;
         
         this.perspectiveCamera = new THREE.PerspectiveCamera(30, cameraAspectRatio, cameraNear, cameraFar);
-        this.perspectiveCamera.position.set(0, 15, 25);
+        // Set camera position rotated 30 degrees around Y axis
+        const yRotation = 50 *  Math.PI / 180;
+        const initialX = 0;
+        const initialZ = 25;
+        const rotatedX = initialX * Math.cos(yRotation) - initialZ * Math.sin(yRotation);
+        const rotatedZ = initialX * Math.sin(yRotation) + initialZ * Math.cos(yRotation);
+        this.perspectiveCamera.position.set(rotatedX, 15, rotatedZ);
         this.perspectiveCamera.lookAt(0, 0, 0);
         
         const orthoSize = 20;
@@ -67,7 +73,8 @@ class Pen3DSim {
             cameraNear,
             cameraFar
         );
-        this.orthographicCamera.position.set(0, 15, 25);
+        // Set camera position rotated 30 degrees around Y axis
+        this.orthographicCamera.position.set(rotatedX, 15, rotatedZ);
         this.orthographicCamera.lookAt(0, 0, 0);
         
         this.camera = this.perspectiveCamera;
@@ -90,6 +97,8 @@ class Pen3DSim {
         this.controls.minDistance = 1;
         this.controls.maxDistance = 100;
         this.controls.maxPolarAngle = Math.PI / 2;
+        // Update controls to sync with camera's initial rotation
+        this.controls.update();
     }
     
     initLighting() {

@@ -65,6 +65,11 @@
             <button id="annotations-flyout-close" class="flyout-close-btn">×</button>
         </div>
         <div class="flyout-content">
+            <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+                <button id="annotations-all-on-btn" class="flyout-button" style="flex: 1;">All On</button>
+                <button id="annotations-all-off-btn" class="flyout-button" style="flex: 1;">All Off</button>
+            </div>
+            
             <div class="control-group">
                 <label style="display: flex; align-items: center; gap: 8px;">
                     <input type="checkbox" id="altitude-annotations" style="width: auto; margin: 0;">
@@ -295,6 +300,43 @@
     sim.setCursorVisible(cursorVisibleCheckbox.checked);
     cursorVisibleCheckbox.addEventListener('change', (e) => {
         sim.setCursorVisible(e.target.checked);
+    });
+    
+    // All annotations on/off buttons
+    document.getElementById('annotations-all-on-btn').addEventListener('click', () => {
+        altitudeAnnotationsCheckbox.checked = true;
+        azimuthAnnotationsCheckbox.checked = true;
+        tiltXAnnotationsCheckbox.checked = true;
+        tiltYAnnotationsCheckbox.checked = true;
+        barrelAnnotationsCheckbox.checked = true;
+        axisMarkersCheckbox.checked = true;
+        cursorVisibleCheckbox.checked = true;
+        
+        sim.setAltitudeAnnotationsVisible(true);
+        sim.setAzimuthAnnotationsVisible(true);
+        sim.setTiltXAnnotationsVisible(true);
+        sim.setTiltYAnnotationsVisible(true);
+        sim.setBarrelAnnotationsVisible(true);
+        sim.setAxisMarkersVisible(true);
+        sim.setCursorVisible(true);
+    });
+    
+    document.getElementById('annotations-all-off-btn').addEventListener('click', () => {
+        altitudeAnnotationsCheckbox.checked = false;
+        azimuthAnnotationsCheckbox.checked = false;
+        tiltXAnnotationsCheckbox.checked = false;
+        tiltYAnnotationsCheckbox.checked = false;
+        barrelAnnotationsCheckbox.checked = false;
+        axisMarkersCheckbox.checked = false;
+        cursorVisibleCheckbox.checked = false;
+        
+        sim.setAltitudeAnnotationsVisible(false);
+        sim.setAzimuthAnnotationsVisible(false);
+        sim.setTiltXAnnotationsVisible(false);
+        sim.setTiltYAnnotationsVisible(false);
+        sim.setBarrelAnnotationsVisible(false);
+        sim.setAxisMarkersVisible(false);
+        sim.setCursorVisible(false);
     });
     
     // Reset pen button
