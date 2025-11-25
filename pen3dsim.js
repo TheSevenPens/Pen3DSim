@@ -1561,5 +1561,166 @@ class Pen3DSim {
         
         return result;
     }
+    
+    // Get current camera settings as a formatted string
+    getCameraSettings() {
+        try {
+            const cam = this.camera;
+            const pos = cam.position;
+            const rot = cam.rotation;
+            const isPerspective = cam === this.perspectiveCamera;
+            
+            // Calculate distance from camera to target (controls.target, default is 0,0,0)
+            const target = this.controls.target || new THREE.Vector3(0, 0, 0);
+            const distance = pos.distanceTo(target);
+            
+            let settings = `Type: ${isPerspective ? 'Perspective' : 'Orthographic'}\n`;
+            settings += `Position: (${pos.x.toFixed(2)}, ${pos.y.toFixed(2)}, ${pos.z.toFixed(2)})\n`;
+            settings += `Rotation: (${(rot.x * 180 / Math.PI).toFixed(2)}°, ${(rot.y * 180 / Math.PI).toFixed(2)}°, ${(rot.z * 180 / Math.PI).toFixed(2)}°)\n`;
+            
+            if (isPerspective) {
+                settings += `FOV: ${cam.fov.toFixed(1)}°\n`;
+                settings += `Aspect: ${cam.aspect.toFixed(3)}\n`;
+            } else {
+                settings += `Size: ${this.orthoSize.toFixed(2)}\n`;
+                settings += `Aspect: ${cam.aspect.toFixed(3)}\n`;
+            }
+            
+            settings += `Near: ${cam.near.toFixed(2)}, Far: ${cam.far.toFixed(0)}\n`;
+            settings += `Distance: ${distance.toFixed(2)}\n`;
+            settings += `Target: (${target.x.toFixed(2)}, ${target.y.toFixed(2)}, ${target.z.toFixed(2)})`;
+            
+            return settings;
+        } catch (error) {
+            return `Error getting camera settings: ${error.message}`;
+        }
+    }
+    
+    // Get current camera settings as JSON
+    getCameraSettingsJSON() {
+        try {
+            const cam = this.camera;
+            const pos = cam.position;
+            const rot = cam.rotation;
+            const isPerspective = cam === this.perspectiveCamera;
+            const target = this.controls.target || new THREE.Vector3(0, 0, 0);
+            
+            const settings = {
+                type: isPerspective ? 'perspective' : 'orthographic',
+                position: {
+                    x: pos.x,
+                    y: pos.y,
+                    z: pos.z
+                },
+                rotation: {
+                    x: rot.x,
+                    y: rot.y,
+                    z: rot.z
+                },
+                target: {
+                    x: target.x,
+                    y: target.y,
+                    z: target.z
+                },
+                near: cam.near,
+                far: cam.far,
+                aspect: cam.aspect
+            };
+            
+            if (isPerspective) {
+                settings.fov = cam.fov;
+            } else {
+                settings.size = this.orthoSize;
+            }
+            
+            return JSON.stringify(settings, null, 2);
+        } catch (error) {
+            throw new Error(`Error getting camera settings: ${error.message}`);
+        }
+    }
+    
+    // Apply camera settings from JSON
+    setCameraSettingsJSON(jsonString) {
+        try {
+            const settings = JSON.parse(jsonString);
+            
+            // Validate required fields
+            if (!settings.position || !settings.rotation || !settings.target) {
+                throw new Error('Missing required fields: position, rotation, or target');
+            }
+            
+            // Determine which camera to use
+            const usePerspective = settings.type === 'perspective' || (settings.type !== 'orthographic' && this.camera === this.perspectiveCamera);
+            
+            // Switch camera type if needed
+            if (usePerspective && this.camera !== this.perspectiveCamera) {
+                this.perspectiveCamera.position.copy(this.orthographicCamera.position);
+                this.perspectiveCamera.rotation.copy(this.orthographicCamera.rotation);
+                this.camera = this.perspectiveCamera;
+                this.controls.object = this.camera;
+            } else if (!usePerspective && this.camera !== this.orthographicCamera) {
+                this.orthographicCamera.position.copy(this.perspectiveCamera.position);
+                this.orthographicCamera.rotation.copy(this.perspectiveCamera.rotation);
+                this.camera = this.orthographicCamera;
+                this.controls.object = this.camera;
+            }
+            
+            // Apply position
+            this.camera.position.set(
+                settings.position.x,
+                settings.position.y,
+                settings.position.z
+            );
+            
+            // Apply rotation
+            this.camera.rotation.set(
+                settings.rotation.x,
+                settings.rotation.y,
+                settings.rotation.z
+            );
+            
+            // Apply target
+            if (settings.target) {
+                this.controls.target.set(
+                    settings.target.x,
+                    settings.target.y,
+                    settings.target.z
+                );
+            }
+            
+            // Apply camera-specific settings
+            if (usePerspective && settings.fov !== undefined) {
+                this.perspectiveCamera.fov = settings.fov;
+                this.perspectiveCamera.updateProjectionMatrix();
+            } else if (!usePerspective && settings.size !== undefined) {
+                this.orthoSize = settings.size;
+                const aspect = this.camera.aspect;
+                this.orthographicCamera.left = -this.orthoSize * aspect;
+                this.orthographicCamera.right = this.orthoSize * aspect;
+                this.orthographicCamera.top = this.orthoSize;
+                this.orthographicCamera.bottom = -this.orthoSize;
+                this.orthographicCamera.updateProjectionMatrix();
+            }
+            
+            // Apply near/far if provided
+            if (settings.near !== undefined) {
+                this.camera.near = settings.near;
+            }
+            if (settings.far !== undefined) {
+                this.camera.far = settings.far;
+            }
+            if (settings.aspect !== undefined) {
+                this.camera.aspect = settings.aspect;
+            }
+            this.camera.updateProjectionMatrix();
+            
+            // Update controls
+            this.controls.update();
+            
+            return true;
+        } catch (error) {
+            throw new Error(`Error applying camera settings: ${error.message}`);
+        }
+    }
 }
 

@@ -61,7 +61,7 @@ input[type="range"] {
     margin-bottom: 0;
 }
 
-#export-btn, #reset-btn, #demo-btn, #anim-btn {
+#export-btn, #reset-btn, #demo-btn, #anim-btn, #edit-view-btn, #anim-tilt-altitude-btn, #anim-tilt-azimuth-btn, #anim-barrel-btn {
     padding: 6px 6px;
     background: #4CAF50;
     color: white;
@@ -71,13 +71,14 @@ input[type="range"] {
     font-size: 12px;
     font-weight: bold;
     transition: background 0.3s;
+    margin-top: 4px;
 }
 
-#export-btn:hover, #reset-btn:hover, #demo-btn:hover, #anim-btn:hover {
+#export-btn:hover, #reset-btn:hover, #demo-btn:hover, #anim-btn:hover, #edit-view-btn:hover, #anim-tilt-altitude-btn:hover, #anim-tilt-azimuth-btn:hover, #anim-barrel-btn:hover {
     background: #45a049;
 }
 
-#export-btn:active, #reset-btn:active, #demo-btn:active, #anim-btn:active {
+#export-btn:active, #reset-btn:active, #demo-btn:active, #anim-btn:active, #edit-view-btn:active, #anim-tilt-altitude-btn:active, #anim-tilt-azimuth-btn:active, #anim-barrel-btn:active {
     background: #3d8b40;
 }
 

@@ -105,16 +105,28 @@
         </div>
     </div>
 
-
     <button id="reset-btn">Reset pen</button>
     <button id="demo-btn">Demo</button>
     <button id="anim-btn">Anim Rot all</button>
     <button id="anim-tilt-altitude-btn">Anim Tilt Altitude</button>
     <button id="anim-tilt-azimuth-btn">Anim Tilt Azimuth</button>
     <button id="anim-barrel-btn">Anim Barrel</button>
+    <button id="edit-view-btn">Edit View</button>
     <button id="export-btn">Export as PNG</button>
 </div>
 <div id="viewer">
+</div>
+
+<!-- Modal for editing camera settings -->
+<div id="camera-edit-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); z-index: 1000; justify-content: center; align-items: center; flex-direction: column;">
+    <div style="background: #2d2d2d; padding: 20px; border-radius: 8px; width: 600px; max-width: 90%; max-height: 90%; display: flex; flex-direction: column; box-sizing: border-box;">
+        <h2 style="color: #fff; margin-bottom: 15px; margin-top: 0;">Edit Camera Settings</h2>
+        <textarea id="camera-json-editor" style="width: 100%; height: 400px; font-family: monospace; font-size: 12px; background: #1a1a1a; color: #fff; border: 1px solid #444; padding: 10px; border-radius: 4px; resize: vertical; flex: 1; min-height: 300px; box-sizing: border-box;"></textarea>
+        <div style="display: flex; gap: 10px; margin-top: 15px; justify-content: flex-end;">
+            <button id="camera-edit-cancel" style="padding: 8px 20px; background: #666; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">CANCEL</button>
+            <button id="camera-edit-ok" style="padding: 8px 20px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;">OK</button>
+        </div>
+    </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -442,6 +454,55 @@
         azimuthValueDisplay,
         barrelRotationValueDisplay,
         updateAzimuthSliderState
+    });
+    
+    // Edit View button and modal
+    const editViewBtn = document.getElementById('edit-view-btn');
+    const cameraEditModal = document.getElementById('camera-edit-modal');
+    const cameraJsonEditor = document.getElementById('camera-json-editor');
+    const cameraEditOk = document.getElementById('camera-edit-ok');
+    const cameraEditCancel = document.getElementById('camera-edit-cancel');
+    
+    // Show modal when Edit View button is clicked
+    editViewBtn.addEventListener('click', () => {
+        try {
+            const jsonSettings = sim.getCameraSettingsJSON();
+            cameraJsonEditor.value = jsonSettings;
+            cameraEditModal.style.display = 'flex';
+            cameraJsonEditor.focus();
+        } catch (error) {
+            alert(`Error loading camera settings: ${error.message}`);
+        }
+    });
+    
+    // Close modal when Cancel is clicked
+    cameraEditCancel.addEventListener('click', () => {
+        cameraEditModal.style.display = 'none';
+    });
+    
+    // Close modal when clicking outside the modal content
+    cameraEditModal.addEventListener('click', (e) => {
+        if (e.target === cameraEditModal) {
+            cameraEditModal.style.display = 'none';
+        }
+    });
+    
+    // Apply settings when OK is clicked
+    cameraEditOk.addEventListener('click', () => {
+        try {
+            const jsonText = cameraJsonEditor.value;
+            sim.setCameraSettingsJSON(jsonText);
+            cameraEditModal.style.display = 'none';
+        } catch (error) {
+            alert(`Error applying camera settings: ${error.message}`);
+        }
+    });
+    
+    // Allow Escape key to close modal
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && cameraEditModal.style.display === 'flex') {
+            cameraEditModal.style.display = 'none';
+        }
     });
 </script>
 </body>
