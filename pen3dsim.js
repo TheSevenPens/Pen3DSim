@@ -1456,7 +1456,7 @@ class Pen3DSim {
             tabletZ: 5.3
         };
         
-        const duration = 4000; // 4 seconds
+        const duration = 8000; // 8 seconds
         const startTime = performance.now();
         let animationFrameId = null;
         
