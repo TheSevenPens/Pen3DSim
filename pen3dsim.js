@@ -18,6 +18,8 @@ class Pen3DSim {
         this.showTiltYAnnotations = false;
         this.cursorRotation = 180; // degrees around long axis
         this.cursorTipRotationY = 90; // degrees around Y axis at tip
+        this.cursorOffsetX = 0; // cursor X offset in inches
+        this.cursorOffsetY = 0; // cursor Y offset in inches (Z axis in 3D space)
         
         // Constants
         this.tabletWidth = 16;
@@ -947,11 +949,11 @@ class Pen3DSim {
         this.penAxisLineGeometry.attributes.position.needsUpdate = true;
         this.penAxisLine.computeLineDistances();
         
-        // Update cursor arrow position to point directly below pen tip
+        // Update cursor arrow position to point directly below pen tip, with offset
         this.cursorArrow.position.set(
-            this.penTipLineBottom.x,
+            this.penTipLineBottom.x + this.cursorOffsetX,
             this.yOffset,
-            this.penTipLineBottom.z
+            this.penTipLineBottom.z + this.cursorOffsetY
         );
         
         // Update fuscia arc (tilt altitude)
@@ -1329,6 +1331,30 @@ class Pen3DSim {
     setTabletPositionZ(value) {
         this.tabletOffsetZ = value;
         this.updatePenTransform(this.distance, this.tiltAltitude, this.tiltAzimuth, this.barrelRotation);
+    }
+    
+    setCursorOffsetX(value) {
+        this.cursorOffsetX = value;
+        // Update cursor position directly without recalculating pen transform
+        if (this.cursorArrow) {
+            this.cursorArrow.position.set(
+                this.penTipLineBottom.x + this.cursorOffsetX,
+                this.yOffset,
+                this.penTipLineBottom.z + this.cursorOffsetY
+            );
+        }
+    }
+    
+    setCursorOffsetY(value) {
+        this.cursorOffsetY = value;
+        // Update cursor position directly without recalculating pen transform
+        if (this.cursorArrow) {
+            this.cursorArrow.position.set(
+                this.penTipLineBottom.x + this.cursorOffsetX,
+                this.yOffset,
+                this.penTipLineBottom.z + this.cursorOffsetY
+            );
+        }
     }
     
     setAzimuthAnnotationsVisible(visible) {
