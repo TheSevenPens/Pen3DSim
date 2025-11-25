@@ -117,3 +117,123 @@ input[type="checkbox"] {
     margin: 0;
 }
 
+.flyout-trigger-btn {
+    padding: 6px 6px;
+    background: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: bold;
+    transition: background 0.3s;
+    margin-top: 4px;
+    margin-bottom: 4px;
+    width: 100%;
+}
+
+.flyout-trigger-btn:hover {
+    background: #45a049;
+}
+
+.flyout-trigger-btn:active {
+    background: #3d8b40;
+}
+
+.flyout-panel {
+    position: fixed;
+    top: 0;
+    left: 250px;
+    width: 220px;
+    height: 100vh;
+    background: #2d2d2d;
+    border-right: 2px solid #444;
+    box-shadow: 4px 0 8px rgba(0, 0, 0, 0.3);
+    transform: translateX(-100%);
+    transition: transform 0.3s ease-in-out, visibility 0s 0.3s, opacity 0.3s ease-in-out;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.flyout-panel.open {
+    transform: translateX(0);
+    visibility: visible;
+    opacity: 1;
+    pointer-events: auto;
+    transition: transform 0.3s ease-in-out, visibility 0s, opacity 0.3s ease-in-out;
+}
+
+.flyout-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    border-bottom: 2px solid #444;
+    background: #1a1a1a;
+}
+
+.flyout-header h3 {
+    color: #fff;
+    font-size: 16px;
+    font-weight: bold;
+    margin: 0;
+}
+
+.flyout-close-btn {
+    background: transparent;
+    border: none;
+    color: #fff;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: background 0.2s;
+}
+
+.flyout-close-btn:hover {
+    background: #444;
+}
+
+.flyout-content {
+    padding: 15px 20px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.flyout-content .control-group {
+    margin-bottom: 12px;
+}
+
+.flyout-button {
+    padding: 6px 6px;
+    background: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: bold;
+    transition: background 0.3s;
+    margin-top: 4px;
+    margin-bottom: 4px;
+    width: 100%;
+}
+
+.flyout-button:hover {
+    background: #45a049;
+}
+
+.flyout-button:active {
+    background: #3d8b40;
+}
+

@@ -47,56 +47,9 @@
         <input type="range" id="barrel-rotation" min="0" max="359" step="1" value="0">
     </div>
 
+    <button id="annotations-flyout-btn" class="flyout-trigger-btn">Annotations</button>
+    
     <div class="checkbox-grid">
-        <div class="control-group">
-            <label style="display: flex; align-items: center; gap: 8px;">
-                <input type="checkbox" id="altitude-annotations" style="width: auto; margin: 0;">
-                <span>Tilt altitude</span>
-            </label>
-        </div>
-
-        <div class="control-group">
-            <label style="display: flex; align-items: center; gap: 8px;">
-                <input type="checkbox" id="azimuth-annotations" style="width: auto; margin: 0;">
-                <span>Tilt azimuth</span>
-            </label>
-        </div>
-
-        <div class="control-group">
-            <label style="display: flex; align-items: center; gap: 8px;">
-                <input type="checkbox" id="tilt-x-annotations" style="width: auto; margin: 0;">
-                <span>Tilt X</span>
-            </label>
-        </div>
-
-        <div class="control-group">
-            <label style="display: flex; align-items: center; gap: 8px;">
-                <input type="checkbox" id="tilt-y-annotations" style="width: auto; margin: 0;">
-                <span>Tilt Y</span>
-            </label>
-        </div>
-
-        <div class="control-group">
-            <label style="display: flex; align-items: center; gap: 8px;">
-                <input type="checkbox" id="barrel-annotations" style="width: auto; margin: 0;">
-                <span>Barrel rotation</span>
-            </label>
-        </div>
-
-        <div class="control-group">
-            <label style="display: flex; align-items: center; gap: 8px;">
-                <input type="checkbox" id="axis-markers" style="width: auto; margin: 0;">
-                <span>Axis</span>
-            </label>
-        </div>
-
-        <div class="control-group">
-            <label style="display: flex; align-items: center; gap: 8px;">
-                <input type="checkbox" id="cursor-visible" style="width: auto; margin: 0;" checked>
-                <span>Mouse cursor</span>
-            </label>
-        </div>
-
         <div class="control-group">
             <label style="display: flex; align-items: center; gap: 8px;">
                 <input type="checkbox" id="axonometric-view" style="width: auto; margin: 0;">
@@ -105,14 +58,83 @@
         </div>
     </div>
 
+    <!-- Annotations Flyout -->
+    <div id="annotations-flyout" class="flyout-panel">
+        <div class="flyout-header">
+            <h3>Annotations</h3>
+            <button id="annotations-flyout-close" class="flyout-close-btn">×</button>
+        </div>
+        <div class="flyout-content">
+            <div class="control-group">
+                <label style="display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox" id="altitude-annotations" style="width: auto; margin: 0;">
+                    <span>Tilt altitude</span>
+                </label>
+            </div>
+
+            <div class="control-group">
+                <label style="display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox" id="azimuth-annotations" style="width: auto; margin: 0;">
+                    <span>Tilt azimuth</span>
+                </label>
+            </div>
+
+            <div class="control-group">
+                <label style="display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox" id="tilt-x-annotations" style="width: auto; margin: 0;">
+                    <span>Tilt X</span>
+                </label>
+            </div>
+
+            <div class="control-group">
+                <label style="display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox" id="tilt-y-annotations" style="width: auto; margin: 0;">
+                    <span>Tilt Y</span>
+                </label>
+            </div>
+
+            <div class="control-group">
+                <label style="display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox" id="barrel-annotations" style="width: auto; margin: 0;">
+                    <span>Barrel rotation</span>
+                </label>
+            </div>
+
+            <div class="control-group">
+                <label style="display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox" id="axis-markers" style="width: auto; margin: 0;">
+                    <span>Axis</span>
+                </label>
+            </div>
+
+            <div class="control-group">
+                <label style="display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox" id="cursor-visible" style="width: auto; margin: 0;" checked>
+                    <span>Mouse cursor</span>
+                </label>
+            </div>
+        </div>
+    </div>
+
     <button id="reset-btn">Reset pen</button>
-    <button id="demo-btn">Demo</button>
-    <button id="anim-btn">Anim Rot all</button>
-    <button id="anim-tilt-altitude-btn">Anim Tilt Altitude</button>
-    <button id="anim-tilt-azimuth-btn">Anim Tilt Azimuth</button>
-    <button id="anim-barrel-btn">Anim Barrel</button>
+    <button id="animations-flyout-btn" class="flyout-trigger-btn">Animations</button>
     <button id="edit-view-btn">Edit View</button>
     <button id="export-btn">Export as PNG</button>
+
+    <!-- Animations Flyout -->
+    <div id="animations-flyout" class="flyout-panel">
+        <div class="flyout-header">
+            <h3>Animations</h3>
+            <button id="animations-flyout-close" class="flyout-close-btn">×</button>
+        </div>
+        <div class="flyout-content">
+            <button id="demo-btn" class="flyout-button">Demo</button>
+            <button id="anim-btn" class="flyout-button">Anim Rot all</button>
+            <button id="anim-tilt-altitude-btn" class="flyout-button">Anim Tilt Altitude</button>
+            <button id="anim-tilt-azimuth-btn" class="flyout-button">Anim Tilt Azimuth</button>
+            <button id="anim-barrel-btn" class="flyout-button">Anim Barrel</button>
+        </div>
+    </div>
 </div>
 <div id="viewer">
 </div>
@@ -307,8 +329,16 @@
         sim.setTabletPositionZ(defaults.tabletZ);
     });
     
+    // Get flyout references early (needed for button handlers)
+    const animationsFlyout = document.getElementById('animations-flyout');
+    
     // Demo button
     document.getElementById('demo-btn').addEventListener('click', () => {
+        // Close animations flyout immediately
+        if (animationsFlyout && animationsFlyout.classList.contains('open')) {
+            animationsFlyout.classList.remove('open');
+        }
+        
         // Demo values: distance=0, tabletX=8.6, tabletZ=5.3, altitude=45, azimuth=242, barrelRotation=318
         const demoDistance = 0;
         const demoTiltAltitude = 45;
@@ -365,54 +395,61 @@
     // Anim button
     let cancelAnimation = null;
     document.getElementById('anim-btn').addEventListener('click', () => {
+        // Close animations flyout immediately
+        if (animationsFlyout && animationsFlyout.classList.contains('open')) {
+            animationsFlyout.classList.remove('open');
+        }
+        
         // Cancel any existing animation
         if (cancelAnimation) {
             cancelAnimation();
         }
         
-        // Enable annotations at the start of animation
-        document.getElementById('altitude-annotations').checked = true;
-        document.getElementById('azimuth-annotations').checked = true;
-        // document.getElementById('tilt-x-annotations').checked = true;
-        // document.getElementById('tilt-y-annotations').checked = true;
-        document.getElementById('barrel-annotations').checked = true;
-        
-        sim.setAltitudeAnnotationsVisible(true);
-        sim.setAzimuthAnnotationsVisible(true);
-        // sim.setTiltXAnnotationsVisible(true);
-        // sim.setTiltYAnnotationsVisible(true);
-        sim.setBarrelAnnotationsVisible(true);
-        
-        // Reset to default position first
-        const defaults = sim.reset();
-        
-        // Update sliders and displays to defaults
-        penDistanceSlider.value = defaults.distance;
-        tiltAltitudeSlider.value = defaults.tiltAltitude;
-        tiltAzimuthSlider.value = defaults.tiltAzimuth;
-        barrelRotationSlider.value = defaults.barrelRotation;
-        tabletPositionXSlider.value = defaults.tabletX;
-        tabletPositionZSlider.value = defaults.tabletZ;
-        
-        distanceValueDisplay.textContent = defaults.distance.toFixed(1);
-        altitudeValueDisplay.textContent = defaults.tiltAltitude.toFixed(0);
-        azimuthValueDisplay.textContent = defaults.tiltAzimuth.toFixed(0);
-        barrelRotationValueDisplay.textContent = defaults.barrelRotation.toFixed(0);
-        tabletPositionXValueDisplay.textContent = defaults.tabletX.toFixed(1);
-        tabletPositionZValueDisplay.textContent = defaults.tabletZ.toFixed(1);
-        
-        updateAzimuthSliderState();
-        
-        // Set initial state
-        sim.setDistance(defaults.distance);
-        sim.setTiltAltitude(defaults.tiltAltitude);
-        sim.setTiltAzimuth(defaults.tiltAzimuth);
-        sim.setBarrelRotation(defaults.barrelRotation);
-        sim.setTabletPositionX(defaults.tabletX);
-        sim.setTabletPositionZ(defaults.tabletZ);
-        
-        // Start animation
-        cancelAnimation = sim.animateToDemo((current, progress) => {
+        // Wait 0.5 seconds before starting animation
+        setTimeout(() => {
+            // Enable annotations at the start of animation
+            document.getElementById('altitude-annotations').checked = true;
+            document.getElementById('azimuth-annotations').checked = true;
+            // document.getElementById('tilt-x-annotations').checked = true;
+            // document.getElementById('tilt-y-annotations').checked = true;
+            document.getElementById('barrel-annotations').checked = true;
+            
+            sim.setAltitudeAnnotationsVisible(true);
+            sim.setAzimuthAnnotationsVisible(true);
+            // sim.setTiltXAnnotationsVisible(true);
+            // sim.setTiltYAnnotationsVisible(true);
+            sim.setBarrelAnnotationsVisible(true);
+            
+            // Reset to default position first
+            const defaults = sim.reset();
+            
+            // Update sliders and displays to defaults
+            penDistanceSlider.value = defaults.distance;
+            tiltAltitudeSlider.value = defaults.tiltAltitude;
+            tiltAzimuthSlider.value = defaults.tiltAzimuth;
+            barrelRotationSlider.value = defaults.barrelRotation;
+            tabletPositionXSlider.value = defaults.tabletX;
+            tabletPositionZSlider.value = defaults.tabletZ;
+            
+            distanceValueDisplay.textContent = defaults.distance.toFixed(1);
+            altitudeValueDisplay.textContent = defaults.tiltAltitude.toFixed(0);
+            azimuthValueDisplay.textContent = defaults.tiltAzimuth.toFixed(0);
+            barrelRotationValueDisplay.textContent = defaults.barrelRotation.toFixed(0);
+            tabletPositionXValueDisplay.textContent = defaults.tabletX.toFixed(1);
+            tabletPositionZValueDisplay.textContent = defaults.tabletZ.toFixed(1);
+            
+            updateAzimuthSliderState();
+            
+            // Set initial state
+            sim.setDistance(defaults.distance);
+            sim.setTiltAltitude(defaults.tiltAltitude);
+            sim.setTiltAzimuth(defaults.tiltAzimuth);
+            sim.setBarrelRotation(defaults.barrelRotation);
+            sim.setTabletPositionX(defaults.tabletX);
+            sim.setTabletPositionZ(defaults.tabletZ);
+            
+            // Start animation
+            cancelAnimation = sim.animateToDemo((current, progress) => {
             // Update sliders and displays during animation
             penDistanceSlider.value = current.distance;
             tiltAltitudeSlider.value = current.tiltAltitude;
@@ -438,6 +475,7 @@
                 cancelAnimation = null;
             }
         });
+        }, 500);
     });
 
     // Export as PNG
@@ -453,7 +491,8 @@
         altitudeValueDisplay,
         azimuthValueDisplay,
         barrelRotationValueDisplay,
-        updateAzimuthSliderState
+        updateAzimuthSliderState,
+        animationsFlyout
     });
     
     // Edit View button and modal
@@ -498,10 +537,63 @@
         }
     });
     
-    // Allow Escape key to close modal
+    // Annotations and Animations flyout toggles
+    const annotationsFlyoutBtn = document.getElementById('annotations-flyout-btn');
+    const annotationsFlyout = document.getElementById('annotations-flyout');
+    const annotationsFlyoutClose = document.getElementById('annotations-flyout-close');
+    const animationsFlyoutBtn = document.getElementById('animations-flyout-btn');
+    const animationsFlyoutClose = document.getElementById('animations-flyout-close');
+    
+    annotationsFlyoutBtn.addEventListener('click', () => {
+        // Close animations flyout if open
+        if (animationsFlyout.classList.contains('open')) {
+            animationsFlyout.classList.remove('open');
+        }
+        annotationsFlyout.classList.toggle('open');
+    });
+    
+    annotationsFlyoutClose.addEventListener('click', () => {
+        annotationsFlyout.classList.remove('open');
+    });
+    
+    animationsFlyoutBtn.addEventListener('click', () => {
+        // Close annotations flyout if open
+        if (annotationsFlyout.classList.contains('open')) {
+            annotationsFlyout.classList.remove('open');
+        }
+        animationsFlyout.classList.toggle('open');
+    });
+    
+    animationsFlyoutClose.addEventListener('click', () => {
+        animationsFlyout.classList.remove('open');
+    });
+    
+    // Allow Escape key to close modal and flyouts
     document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && cameraEditModal.style.display === 'flex') {
-            cameraEditModal.style.display = 'none';
+        if (e.key === 'Escape') {
+            if (cameraEditModal.style.display === 'flex') {
+                cameraEditModal.style.display = 'none';
+            }
+            if (annotationsFlyout.classList.contains('open')) {
+                annotationsFlyout.classList.remove('open');
+            }
+            if (animationsFlyout.classList.contains('open')) {
+                animationsFlyout.classList.remove('open');
+            }
+        }
+    });
+    
+    // Close flyouts when clicking outside
+    document.addEventListener('click', (e) => {
+        if (annotationsFlyout.classList.contains('open') && 
+            !annotationsFlyout.contains(e.target) && 
+            e.target !== annotationsFlyoutBtn) {
+            annotationsFlyout.classList.remove('open');
+        }
+        if (animationsFlyout.classList.contains('open') && 
+            !animationsFlyout.contains(e.target) && 
+            e.target !== animationsFlyoutBtn) {
+            animationsFlyout.classList.remove('open');
         }
     });
 </script>

@@ -7,7 +7,8 @@ function initializeAnimations(sim, uiElements) {
         altitudeValueDisplay,
         azimuthValueDisplay,
         barrelRotationValueDisplay,
-        updateAzimuthSliderState
+        updateAzimuthSliderState,
+        animationsFlyout
     } = uiElements;
 
     // Animation state
@@ -17,26 +18,33 @@ function initializeAnimations(sim, uiElements) {
 
     // Tilt X animation (animates altitude from 0 to 45)
     document.getElementById('anim-tilt-altitude-btn').addEventListener('click', () => {
+        // Close animations flyout immediately
+        if (animationsFlyout && animationsFlyout.classList.contains('open')) {
+            animationsFlyout.classList.remove('open');
+        }
+        
         // Cancel any existing animation
         if (cancelTiltXAnimation) {
             cancelTiltXAnimation();
         }
         
-        // Animate tilt altitude from 0 to 45 (this affects tiltX)
-        // Keep current azimuth to only change altitude
-        const currentAzimuth = parseFloat(tiltAzimuthSlider.value);
-        const startAltitude = 0;
-        const endAltitude = 45;
-        
-        // Set initial altitude to 0
-        sim.setTiltAltitude(startAltitude);
-        sim.setTiltAzimuth(currentAzimuth);
-        
-        const duration = 8000; // 8 seconds
-        const startTime = performance.now();
-        let animationFrameId = null;
-        
-        const animate = (currentTime) => {
+        // Wait 0.5 seconds before starting animation
+        setTimeout(() => {
+            // Animate tilt altitude from 0 to 45 (this affects tiltX)
+            // Keep current azimuth to only change altitude
+            const currentAzimuth = parseFloat(tiltAzimuthSlider.value);
+            const startAltitude = 0;
+            const endAltitude = 45;
+            
+            // Set initial altitude to 0
+            sim.setTiltAltitude(startAltitude);
+            sim.setTiltAzimuth(currentAzimuth);
+            
+            const duration = 8000; // 8 seconds
+            const startTime = performance.now();
+            let animationFrameId = null;
+            
+            const animate = (currentTime) => {
             const elapsed = currentTime - startTime;
             const progress = Math.min(elapsed / duration, 1);
             
@@ -75,30 +83,38 @@ function initializeAnimations(sim, uiElements) {
                 animationFrameId = null;
             }
         };
+        }, 500);
     });
 
     // Tilt Y animation (animates azimuth from 0 to 252)
     document.getElementById('anim-tilt-azimuth-btn').addEventListener('click', () => {
+        // Close animations flyout immediately
+        if (animationsFlyout && animationsFlyout.classList.contains('open')) {
+            animationsFlyout.classList.remove('open');
+        }
+        
         // Cancel any existing animation
         if (cancelTiltYAnimation) {
             cancelTiltYAnimation();
         }
         
-        // Animate tilt azimuth from 0 to 252 (this affects tiltY)
-        // Keep current altitude to only change azimuth
-        const currentAltitude = parseFloat(tiltAltitudeSlider.value);
-        const startAzimuth = 0;
-        const endAzimuth = 252;
-        
-        // Set initial azimuth to 0
-        sim.setTiltAltitude(currentAltitude);
-        sim.setTiltAzimuth(startAzimuth);
-        
-        const duration = 8000; // 8 seconds
-        const startTime = performance.now();
-        let animationFrameId = null;
-        
-        const animate = (currentTime) => {
+        // Wait 0.5 seconds before starting animation
+        setTimeout(() => {
+            // Animate tilt azimuth from 0 to 252 (this affects tiltY)
+            // Keep current altitude to only change azimuth
+            const currentAltitude = parseFloat(tiltAltitudeSlider.value);
+            const startAzimuth = 0;
+            const endAzimuth = 252;
+            
+            // Set initial azimuth to 0
+            sim.setTiltAltitude(currentAltitude);
+            sim.setTiltAzimuth(startAzimuth);
+            
+            const duration = 8000; // 8 seconds
+            const startTime = performance.now();
+            let animationFrameId = null;
+            
+            const animate = (currentTime) => {
             const elapsed = currentTime - startTime;
             const progress = Math.min(elapsed / duration, 1);
             
@@ -137,27 +153,35 @@ function initializeAnimations(sim, uiElements) {
                 animationFrameId = null;
             }
         };
+        }, 500);
     });
 
     // Barrel rotation animation (animates from 0 to 316)
     document.getElementById('anim-barrel-btn').addEventListener('click', () => {
+        // Close animations flyout immediately
+        if (animationsFlyout && animationsFlyout.classList.contains('open')) {
+            animationsFlyout.classList.remove('open');
+        }
+        
         // Cancel any existing animation
         if (cancelBarrelAnimation) {
             cancelBarrelAnimation();
         }
         
-        // Animate barrel rotation from 0 to 316
-        const startBarrel = 0;
-        const endBarrel = 316;
-        
-        // Set initial barrel rotation to 0
-        sim.setBarrelRotation(startBarrel);
-        
-        const duration = 8000; // 8 seconds
-        const startTime = performance.now();
-        let animationFrameId = null;
-        
-        const animate = (currentTime) => {
+        // Wait 0.5 seconds before starting animation
+        setTimeout(() => {
+            // Animate barrel rotation from 0 to 316
+            const startBarrel = 0;
+            const endBarrel = 316;
+            
+            // Set initial barrel rotation to 0
+            sim.setBarrelRotation(startBarrel);
+            
+            const duration = 8000; // 8 seconds
+            const startTime = performance.now();
+            let animationFrameId = null;
+            
+            const animate = (currentTime) => {
             const elapsed = currentTime - startTime;
             const progress = Math.min(elapsed / duration, 1);
             
@@ -190,6 +214,7 @@ function initializeAnimations(sim, uiElements) {
                 animationFrameId = null;
             }
         };
+        }, 500);
     });
 }
 
