@@ -92,6 +92,13 @@
 
     <div class="control-group">
         <label style="display: flex; align-items: center; gap: 8px;">
+            <input type="checkbox" id="cursor-visible" style="width: auto; margin: 0;" checked>
+            <span>Mouse cursor</span>
+        </label>
+    </div>
+
+    <div class="control-group">
+        <label style="display: flex; align-items: center; gap: 8px;">
             <input type="checkbox" id="axonometric-view" style="width: auto; margin: 0;">
             <span>Axonometric</span>
         </label>
@@ -242,6 +249,13 @@
     sim.setAxisMarkersVisible(axisMarkersCheckbox.checked);
     axisMarkersCheckbox.addEventListener('change', (e) => {
         sim.setAxisMarkersVisible(e.target.checked);
+    });
+    
+    // Cursor visibility checkbox
+    const cursorVisibleCheckbox = document.getElementById('cursor-visible');
+    sim.setCursorVisible(cursorVisibleCheckbox.checked);
+    cursorVisibleCheckbox.addEventListener('change', (e) => {
+        sim.setCursorVisible(e.target.checked);
     });
     
     // Reset pen button

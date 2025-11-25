@@ -1332,6 +1332,12 @@ class Pen3DSim {
         this.updatePenTransform(this.distance, this.tiltAltitude, this.tiltAzimuth, this.barrelRotation);
     }
     
+    setCursorVisible(visible) {
+        if (this.cursorArrow) {
+            this.cursorArrow.visible = visible;
+        }
+    }
+    
     setAxisMarkersVisible(visible) {
         this.xArrow.visible = visible;
         this.yArrow.visible = visible;
