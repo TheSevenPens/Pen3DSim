@@ -456,30 +456,30 @@ class Pen3DSim {
         
         this.scene.add(this.barrelAnnotationGroup);
         
-        // Fuscia arc (tilt altitude)
-        const fusciaArcThickness = 0.02;
-        const fusciaArcMaterial = new THREE.MeshBasicMaterial({ color: 0xff00ff });
-        const fusciaArcGeometry = new THREE.BufferGeometry();
-        this.fusciaArcLine = new THREE.Mesh(fusciaArcGeometry, fusciaArcMaterial);
-        this.scene.add(this.fusciaArcLine);
+        // Tilt altitude arc annotation
+        const tiltAltitudeArcThickness = 0.02;
+        const tiltAltitudeArcMaterial = new THREE.MeshBasicMaterial({ color: 0xff00ff });
+        const tiltAltitudeArcGeometry = new THREE.BufferGeometry();
+        this.tiltAltitudeArcLine = new THREE.Mesh(tiltAltitudeArcGeometry, tiltAltitudeArcMaterial);
+        this.scene.add(this.tiltAltitudeArcLine);
         
-        this.fusciaPieMaterial = new THREE.MeshBasicMaterial({ 
+        this.tiltAltitudePieMaterial = new THREE.MeshBasicMaterial({ 
             color: 0xff00ff, 
             transparent: true, 
             opacity: 0.3,
             side: THREE.DoubleSide
         });
-        this.fusciaPieMesh = null;
+        this.tiltAltitudePieMesh = null;
         
-        const fusciaVerticalLineMaterial = new THREE.LineBasicMaterial({ color: 0xff00ff, linewidth: 2 });
-        const fusciaVerticalLineGeometry = new THREE.BufferGeometry();
-        this.fusciaVerticalLine = new THREE.Line(fusciaVerticalLineGeometry, fusciaVerticalLineMaterial);
-        this.scene.add(this.fusciaVerticalLine);
+        const tiltAltitudeVerticalLineMaterial = new THREE.LineBasicMaterial({ color: 0xff00ff, linewidth: 2 });
+        const tiltAltitudeVerticalLineGeometry = new THREE.BufferGeometry();
+        this.tiltAltitudeVerticalLine = new THREE.Line(tiltAltitudeVerticalLineGeometry, tiltAltitudeVerticalLineMaterial);
+        this.scene.add(this.tiltAltitudeVerticalLine);
         
-        const fusciaSemicircleMaterial = this.createDashedLineMaterial(0xff00ff, 2);
-        const fusciaSemicircleGeometry = new THREE.BufferGeometry();
-        this.fusciaSemicircleLine = new THREE.Line(fusciaSemicircleGeometry, fusciaSemicircleMaterial);
-        this.scene.add(this.fusciaSemicircleLine);
+        const tiltAltitudeSemicircleMaterial = this.createDashedLineMaterial(0xff00ff, 2);
+        const tiltAltitudeSemicircleGeometry = new THREE.BufferGeometry();
+        this.tiltAltitudeSemicircleLine = new THREE.Line(tiltAltitudeSemicircleGeometry, tiltAltitudeSemicircleMaterial);
+        this.scene.add(this.tiltAltitudeSemicircleLine);
         
         // Tilt X annotation
         const tiltXArcThickness = 0.02;
@@ -958,65 +958,65 @@ class Pen3DSim {
             this.penTipLineBottom.z + this.cursorOffsetY
         );
         
-        // Update fuscia arc (tilt altitude)
+        // Update tilt altitude arc annotation
         const arcCenter = this.penTipWorld.clone();
         const arcRadius = 2.0;
         
         const verticalDir = new THREE.Vector3(0, 1, 0);
         // Reuse penAxisDir calculated above
         
-        const fusciaU = verticalDir.clone().normalize();
-        const penAxisProjected = penAxisDir.clone().sub(fusciaU.clone().multiplyScalar(penAxisDir.dot(fusciaU)));
+        const tiltAltitudeU = verticalDir.clone().normalize();
+        const penAxisProjected = penAxisDir.clone().sub(tiltAltitudeU.clone().multiplyScalar(penAxisDir.dot(tiltAltitudeU)));
         
-        // Calculate fusciaV based on pen axis projection when altitude is non-zero,
+        // Calculate tiltAltitudeV based on pen axis projection when altitude is non-zero,
         // or based on azimuth direction when altitude is zero (to maintain consistent orientation)
-        let fusciaV;
+        let tiltAltitudeV;
         if (penAxisProjected.length() > 0.001) {
-            fusciaV = penAxisProjected.normalize();
+            tiltAltitudeV = penAxisProjected.normalize();
         } else {
             // When altitude is 0, use azimuth direction to maintain consistent circle orientation
             // azimuthRad is already calculated at the start of this function
-            fusciaV = new THREE.Vector3(Math.sin(azimuthRad), 0, Math.cos(azimuthRad)).normalize();
+            tiltAltitudeV = new THREE.Vector3(Math.sin(azimuthRad), 0, Math.cos(azimuthRad)).normalize();
         }
         
-        const fusciaStartAngle = 0;
-        const fusciaEndAngle = Math.atan2(penAxisDir.dot(fusciaV), penAxisDir.dot(fusciaU));
+        const tiltAltitudeStartAngle = 0;
+        const tiltAltitudeEndAngle = Math.atan2(penAxisDir.dot(tiltAltitudeV), penAxisDir.dot(tiltAltitudeU));
         
         // Always show dotted circle when annotations are enabled
         if (this.showAltitudeAnnotations) {
-            this.updateDottedCircle(this.fusciaSemicircleLine, arcCenter, fusciaU, fusciaV, arcRadius, 64);
+            this.updateDottedCircle(this.tiltAltitudeSemicircleLine, arcCenter, tiltAltitudeU, tiltAltitudeV, arcRadius, 64);
         } else {
-            this.fusciaSemicircleLine.visible = false;
+            this.tiltAltitudeSemicircleLine.visible = false;
         }
         
         // Show other annotation elements only when altitude is non-zero
         if (altitude !== 0 && this.showAltitudeAnnotations) {
-            const arcStartPoint = arcCenter.clone().add(fusciaU.clone().multiplyScalar(arcRadius));
-            this.updateVerticalLine(this.fusciaVerticalLine, this.penTipWorld.clone(), arcStartPoint);
+            const arcStartPoint = arcCenter.clone().add(tiltAltitudeU.clone().multiplyScalar(arcRadius));
+            this.updateVerticalLine(this.tiltAltitudeVerticalLine, this.penTipWorld.clone(), arcStartPoint);
             
-            this.updateArcWithTube(this.fusciaArcLine, arcCenter, fusciaU, fusciaV, arcRadius, fusciaStartAngle, fusciaEndAngle, 32);
+            this.updateArcWithTube(this.tiltAltitudeArcLine, arcCenter, tiltAltitudeU, tiltAltitudeV, arcRadius, tiltAltitudeStartAngle, tiltAltitudeEndAngle, 32);
             
-            this.fusciaPieMesh = this.cleanupPieMesh(this.fusciaPieMesh, this.scene);
-            const fusciaPieShape = new THREE.Shape();
-            fusciaPieShape.moveTo(0, 0);
-            const fusciaPieSegments = 32;
-            for (let i = 0; i <= fusciaPieSegments; i++) {
-                const angle = fusciaStartAngle + (fusciaEndAngle - fusciaStartAngle) * (i / fusciaPieSegments);
+            this.tiltAltitudePieMesh = this.cleanupPieMesh(this.tiltAltitudePieMesh, this.scene);
+            const tiltAltitudePieShape = new THREE.Shape();
+            tiltAltitudePieShape.moveTo(0, 0);
+            const tiltAltitudePieSegments = 32;
+            for (let i = 0; i <= tiltAltitudePieSegments; i++) {
+                const angle = tiltAltitudeStartAngle + (tiltAltitudeEndAngle - tiltAltitudeStartAngle) * (i / tiltAltitudePieSegments);
                 const cosA = Math.cos(angle);
                 const sinA = Math.sin(angle);
-                fusciaPieShape.lineTo(arcRadius * cosA, arcRadius * sinA);
+                tiltAltitudePieShape.lineTo(arcRadius * cosA, arcRadius * sinA);
             }
-            fusciaPieShape.lineTo(0, 0);
-            const fusciaPieGeometry = new THREE.ShapeGeometry(fusciaPieShape);
-            this.fusciaPieMesh = new THREE.Mesh(fusciaPieGeometry, this.fusciaPieMaterial);
-            this.fusciaPieMesh.position.copy(arcCenter);
+            tiltAltitudePieShape.lineTo(0, 0);
+            const tiltAltitudePieGeometry = new THREE.ShapeGeometry(tiltAltitudePieShape);
+            this.tiltAltitudePieMesh = new THREE.Mesh(tiltAltitudePieGeometry, this.tiltAltitudePieMaterial);
+            this.tiltAltitudePieMesh.position.copy(arcCenter);
             
-            this.fusciaPieMesh.setRotationFromQuaternion(this.calculatePieRotationQuaternion(fusciaU, fusciaV));
-            this.scene.add(this.fusciaPieMesh);
+            this.tiltAltitudePieMesh.setRotationFromQuaternion(this.calculatePieRotationQuaternion(tiltAltitudeU, tiltAltitudeV));
+            this.scene.add(this.tiltAltitudePieMesh);
         } else {
-            this.fusciaVerticalLine.visible = false;
-            this.fusciaArcLine.visible = false;
-            this.fusciaPieMesh = this.cleanupPieMesh(this.fusciaPieMesh, this.scene);
+            this.tiltAltitudeVerticalLine.visible = false;
+            this.tiltAltitudeArcLine.visible = false;
+            this.tiltAltitudePieMesh = this.cleanupPieMesh(this.tiltAltitudePieMesh, this.scene);
         }
         
         const tiltX = this.calculateTiltX(altitude, azimuth);
