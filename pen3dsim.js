@@ -27,6 +27,7 @@ class Pen3DSim {
         this.yOffset = 0.051;
         this.arcRadius = 1.5;
         this.barrelArcRadius = 1.5;
+        this.azimuthColor = 0x77dd33; // Green color for azimuth annotations
         
         // Initialize scene
         this.initScene();
@@ -378,26 +379,26 @@ class Pen3DSim {
     initAnnotations() {
         // Arc annotation group (azimuth)
         this.arcAnnotationGroup = new THREE.Group();
-        const arcMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+        const arcMaterial = new THREE.MeshBasicMaterial({ color: this.azimuthColor });
         const arcThickness = 0.02;
         
         const arcGeometry = new THREE.BufferGeometry();
         this.arcLine = new THREE.Mesh(arcGeometry, arcMaterial);
         this.arcAnnotationGroup.add(this.arcLine);
         
-        const arrowMaterial = new THREE.LineBasicMaterial({ color: 0x00ff00, linewidth: 2 });
+        const arrowMaterial = new THREE.LineBasicMaterial({ color: this.azimuthColor, linewidth: 2 });
         const arrowGeometry = new THREE.BufferGeometry();
         const arrowLine = new THREE.Line(arrowGeometry, arrowMaterial);
         arrowLine.visible = false;
         this.arcAnnotationGroup.add(arrowLine);
         
-        const dottedArcMaterial = this.createDashedLineMaterial(0x00ff00, 2);
+        const dottedArcMaterial = this.createDashedLineMaterial(this.azimuthColor, 2);
         const dottedArcGeometry = new THREE.BufferGeometry();
         this.dottedArcLine = new THREE.Line(dottedArcGeometry, dottedArcMaterial);
         this.arcAnnotationGroup.add(this.dottedArcLine);
         
         this.arcPieMaterial = new THREE.MeshBasicMaterial({ 
-            color: 0x00ff00, 
+            color: this.azimuthColor, 
             transparent: true, 
             opacity: 0.3,
             side: THREE.DoubleSide
@@ -408,7 +409,7 @@ class Pen3DSim {
         
         // Surface line
         this.surfaceLineGeometry = new THREE.BufferGeometry();
-        const surfaceLineMaterial = new THREE.LineBasicMaterial({ color: 0x00ff00, linewidth: 2 });
+        const surfaceLineMaterial = new THREE.LineBasicMaterial({ color: this.azimuthColor, linewidth: 2 });
         this.surfaceLine = new THREE.Line(this.surfaceLineGeometry, surfaceLineMaterial);
         this.scene.add(this.surfaceLine);
         
