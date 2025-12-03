@@ -28,6 +28,7 @@ class Pen3DSim {
         this.arcRadius = 1.5;
         this.barrelArcRadius = 1.5;
         this.azimuthColor = 0x77dd33; // Green color for azimuth annotations
+        this.tiltAltitudeColor = 0xee33cc; // Magenta color for tilt altitude annotations
         
         // Initialize scene
         this.initScene();
@@ -459,25 +460,25 @@ class Pen3DSim {
         
         // Tilt altitude arc annotation
         const tiltAltitudeArcThickness = 0.02;
-        const tiltAltitudeArcMaterial = new THREE.MeshBasicMaterial({ color: 0xff00ff });
+        const tiltAltitudeArcMaterial = new THREE.MeshBasicMaterial({ color: this.tiltAltitudeColor });
         const tiltAltitudeArcGeometry = new THREE.BufferGeometry();
         this.tiltAltitudeArcLine = new THREE.Mesh(tiltAltitudeArcGeometry, tiltAltitudeArcMaterial);
         this.scene.add(this.tiltAltitudeArcLine);
         
         this.tiltAltitudePieMaterial = new THREE.MeshBasicMaterial({ 
-            color: 0xff00ff, 
+            color: this.tiltAltitudeColor, 
             transparent: true, 
             opacity: 0.3,
             side: THREE.DoubleSide
         });
         this.tiltAltitudePieMesh = null;
         
-        const tiltAltitudeVerticalLineMaterial = new THREE.LineBasicMaterial({ color: 0xff00ff, linewidth: 2 });
+        const tiltAltitudeVerticalLineMaterial = new THREE.LineBasicMaterial({ color: this.tiltAltitudeColor, linewidth: 2 });
         const tiltAltitudeVerticalLineGeometry = new THREE.BufferGeometry();
         this.tiltAltitudeVerticalLine = new THREE.Line(tiltAltitudeVerticalLineGeometry, tiltAltitudeVerticalLineMaterial);
         this.scene.add(this.tiltAltitudeVerticalLine);
         
-        const tiltAltitudeSemicircleMaterial = this.createDashedLineMaterial(0xff00ff, 2);
+        const tiltAltitudeSemicircleMaterial = this.createDashedLineMaterial(this.tiltAltitudeColor, 2);
         const tiltAltitudeSemicircleGeometry = new THREE.BufferGeometry();
         this.tiltAltitudeSemicircleLine = new THREE.Line(tiltAltitudeSemicircleGeometry, tiltAltitudeSemicircleMaterial);
         this.scene.add(this.tiltAltitudeSemicircleLine);
