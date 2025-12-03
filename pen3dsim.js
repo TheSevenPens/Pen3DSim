@@ -1023,7 +1023,7 @@ class Pen3DSim {
         const tiltY = this.calculateTiltY(altitude, azimuth);
         
         // Update tilt X annotation
-        if (tiltX !== 0 && this.showTiltXAnnotations) {
+        if (this.showTiltXAnnotations) {
             const tiltXArcCenter = this.penTipWorld.clone();
             const tiltXArcRadius = 2.0;
             const tiltXU = new THREE.Vector3(0, 1, 0);
@@ -1032,17 +1032,25 @@ class Pen3DSim {
             const tiltXStartAngle = 0;
             const tiltXEndAngle = (tiltX * Math.PI) / 180;
             
-            const tiltXArcStartPoint = tiltXArcCenter.clone().add(tiltXU.clone().multiplyScalar(tiltXArcRadius));
-            this.updateVerticalLine(this.tiltXVerticalLine, this.penTipWorld.clone(), tiltXArcStartPoint);
-            
-            this.updateArcWithTube(this.tiltXArcLine, tiltXArcCenter, tiltXU, tiltXV, tiltXArcRadius, tiltXStartAngle, tiltXEndAngle, 32);
-            
-            this.tiltXPieMesh = this.cleanupPieMesh(this.tiltXPieMesh, this.scene);
-            this.tiltXPieMesh = this.createPieShapeInPlane(tiltXArcCenter, tiltXU, tiltXV, tiltXArcRadius, tiltXStartAngle, tiltXEndAngle, 32);
-            this.tiltXPieMesh.material = this.tiltXPieMaterial;
-            this.scene.add(this.tiltXPieMesh);
-            
+            // Always show dotted circle when annotations are enabled
             this.updateDottedCircle(this.tiltXDottedCircleLine, tiltXArcCenter, tiltXU, tiltXV, tiltXArcRadius, 64);
+            
+            // Show other annotation elements only when tiltX is non-zero
+            if (tiltX !== 0) {
+                const tiltXArcStartPoint = tiltXArcCenter.clone().add(tiltXU.clone().multiplyScalar(tiltXArcRadius));
+                this.updateVerticalLine(this.tiltXVerticalLine, this.penTipWorld.clone(), tiltXArcStartPoint);
+                
+                this.updateArcWithTube(this.tiltXArcLine, tiltXArcCenter, tiltXU, tiltXV, tiltXArcRadius, tiltXStartAngle, tiltXEndAngle, 32);
+                
+                this.tiltXPieMesh = this.cleanupPieMesh(this.tiltXPieMesh, this.scene);
+                this.tiltXPieMesh = this.createPieShapeInPlane(tiltXArcCenter, tiltXU, tiltXV, tiltXArcRadius, tiltXStartAngle, tiltXEndAngle, 32);
+                this.tiltXPieMesh.material = this.tiltXPieMaterial;
+                this.scene.add(this.tiltXPieMesh);
+            } else {
+                this.tiltXVerticalLine.visible = false;
+                this.tiltXArcLine.visible = false;
+                this.tiltXPieMesh = this.cleanupPieMesh(this.tiltXPieMesh, this.scene);
+            }
         } else {
             this.tiltXVerticalLine.visible = false;
             this.tiltXArcLine.visible = false;
@@ -1051,7 +1059,7 @@ class Pen3DSim {
         }
         
         // Update tilt Y annotation
-        if (tiltY !== 0 && this.showTiltYAnnotations) {
+        if (this.showTiltYAnnotations) {
             const tiltYArcCenter = this.penTipWorld.clone();
             const tiltYArcRadius = 2.0;
             const tiltYU = new THREE.Vector3(0, 1, 0);
@@ -1060,30 +1068,38 @@ class Pen3DSim {
             const tiltYStartAngle = 0;
             const tiltYEndAngle = (tiltY * Math.PI) / 180;
             
-            const tiltYArcStartPoint = tiltYArcCenter.clone().add(tiltYU.clone().multiplyScalar(tiltYArcRadius));
-            this.updateVerticalLine(this.tiltYVerticalLine, this.penTipWorld.clone(), tiltYArcStartPoint);
-            
-            this.updateArcWithTube(this.tiltYArcLine, tiltYArcCenter, tiltYU, tiltYV, tiltYArcRadius, tiltYStartAngle, tiltYEndAngle, 32);
-            
-            this.tiltYPieMesh = this.cleanupPieMesh(this.tiltYPieMesh, this.scene);
-            const tiltYPieShape = new THREE.Shape();
-            tiltYPieShape.moveTo(0, 0);
-            const tiltYPieSegments = 32;
-            for (let i = 0; i <= tiltYPieSegments; i++) {
-                const angle = tiltYStartAngle + (tiltYEndAngle - tiltYStartAngle) * (i / tiltYPieSegments);
-                const cosA = Math.cos(angle);
-                const sinA = Math.sin(angle);
-                tiltYPieShape.lineTo(tiltYArcRadius * cosA, tiltYArcRadius * sinA);
-            }
-            tiltYPieShape.lineTo(0, 0);
-            const tiltYPieGeometry = new THREE.ShapeGeometry(tiltYPieShape);
-            this.tiltYPieMesh = new THREE.Mesh(tiltYPieGeometry, this.tiltYPieMaterial);
-            this.tiltYPieMesh.position.copy(tiltYArcCenter);
-            
-            this.tiltYPieMesh.setRotationFromQuaternion(this.calculatePieRotationQuaternion(tiltYU, tiltYV));
-            this.scene.add(this.tiltYPieMesh);
-            
+            // Always show dotted circle when annotations are enabled
             this.updateDottedCircle(this.tiltYDottedCircleLine, tiltYArcCenter, tiltYU, tiltYV, tiltYArcRadius, 64);
+            
+            // Show other annotation elements only when tiltY is non-zero
+            if (tiltY !== 0) {
+                const tiltYArcStartPoint = tiltYArcCenter.clone().add(tiltYU.clone().multiplyScalar(tiltYArcRadius));
+                this.updateVerticalLine(this.tiltYVerticalLine, this.penTipWorld.clone(), tiltYArcStartPoint);
+                
+                this.updateArcWithTube(this.tiltYArcLine, tiltYArcCenter, tiltYU, tiltYV, tiltYArcRadius, tiltYStartAngle, tiltYEndAngle, 32);
+                
+                this.tiltYPieMesh = this.cleanupPieMesh(this.tiltYPieMesh, this.scene);
+                const tiltYPieShape = new THREE.Shape();
+                tiltYPieShape.moveTo(0, 0);
+                const tiltYPieSegments = 32;
+                for (let i = 0; i <= tiltYPieSegments; i++) {
+                    const angle = tiltYStartAngle + (tiltYEndAngle - tiltYStartAngle) * (i / tiltYPieSegments);
+                    const cosA = Math.cos(angle);
+                    const sinA = Math.sin(angle);
+                    tiltYPieShape.lineTo(tiltYArcRadius * cosA, tiltYArcRadius * sinA);
+                }
+                tiltYPieShape.lineTo(0, 0);
+                const tiltYPieGeometry = new THREE.ShapeGeometry(tiltYPieShape);
+                this.tiltYPieMesh = new THREE.Mesh(tiltYPieGeometry, this.tiltYPieMaterial);
+                this.tiltYPieMesh.position.copy(tiltYArcCenter);
+                
+                this.tiltYPieMesh.setRotationFromQuaternion(this.calculatePieRotationQuaternion(tiltYU, tiltYV));
+                this.scene.add(this.tiltYPieMesh);
+            } else {
+                this.tiltYVerticalLine.visible = false;
+                this.tiltYArcLine.visible = false;
+                this.tiltYPieMesh = this.cleanupPieMesh(this.tiltYPieMesh, this.scene);
+            }
         } else {
             this.tiltYVerticalLine.visible = false;
             this.tiltYArcLine.visible = false;
