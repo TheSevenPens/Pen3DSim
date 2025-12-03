@@ -803,8 +803,8 @@ class Pen3DSim {
     createDashedLineMaterial(color, linewidth = 2) {
         return new THREE.LineDashedMaterial({ 
             color: color, 
-            dashSize: 0.08, 
-            gapSize: 0.05,
+            dashSize: 0.04, 
+            gapSize: 0.025,
             linewidth: linewidth 
         });
     }
