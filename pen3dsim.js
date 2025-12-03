@@ -139,6 +139,12 @@ class Pen3DSim {
         tablet.receiveShadow = true;
         this.scene.add(tablet);
         
+        // Store references for checkerboard pattern toggle
+        this.tabletMesh = tablet;
+        this.tabletMaterial = material;
+        this.tabletBaseColor = 0x505050;
+        this.tabletCheckerboardTexture = null;
+        
         const wireframe = new THREE.LineSegments(
             new THREE.EdgesGeometry(geometry),
             new THREE.LineBasicMaterial({ color: 0x808080, linewidth: 1 })
@@ -184,7 +190,7 @@ class Pen3DSim {
         const checksX = canvas.width / checkSize;
         const checksY = canvas.height / checkSize;
         
-        const checkColor1 = '#ee66dd';
+        const checkColor1 = '#ff77dd';
         const checkColor2 = '#aa33bb';
         for (let y = 0; y < checksY; y++) {
             for (let x = 0; x < checksX; x++) {
@@ -197,6 +203,45 @@ class Pen3DSim {
         const texture = new THREE.CanvasTexture(canvas);
         texture.magFilter = THREE.NearestFilter;
         texture.minFilter = THREE.NearestFilter;
+        return texture;
+    }
+    
+    createTabletCheckerboardTexture() {
+        // Grid spacing is 0.5 inches, tablet is 16x9 inches
+        // So we need 32x18 squares
+        const gridSpacing = 0.5;
+        const squaresX = this.tabletWidth / gridSpacing; // 32
+        const squaresZ = this.tabletDepth / gridSpacing; // 18
+        
+        // Create a high-resolution texture for crisp squares
+        // Use aspect ratio to ensure squares appear square on the tablet
+        const baseTextureSize = 512;
+        const canvas = document.createElement('canvas');
+        canvas.width = baseTextureSize;
+        canvas.height = Math.round(baseTextureSize * (this.tabletDepth / this.tabletWidth)); // Account for aspect ratio
+        const context = canvas.getContext('2d');
+        
+        const squareSizeX = canvas.width / squaresX;
+        const squareSizeZ = canvas.height / squaresZ;
+        
+        // Use brighter colors for better visibility
+        const checkColor1 = '#505050'; // Medium gray
+        const checkColor2 = '#404040'; // Light gray
+        
+        for (let z = 0; z < squaresZ; z++) {
+            for (let x = 0; x < squaresX; x++) {
+                const isEven = (x + z) % 2 === 0;
+                context.fillStyle = isEven ? checkColor1 : checkColor2;
+                context.fillRect(x * squareSizeX, z * squareSizeZ, squareSizeX, squareSizeZ);
+            }
+        }
+        
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.magFilter = THREE.NearestFilter;
+        texture.minFilter = THREE.NearestFilter;
+        texture.wrapS = THREE.RepeatWrapping;
+        texture.wrapT = THREE.RepeatWrapping;
+        texture.repeat.set(1, 1);
         return texture;
     }
     
@@ -1414,6 +1459,29 @@ class Pen3DSim {
         }
         if (this.penBarrelMesh) {
             this.penBarrelMesh.castShadow = visible;
+        }
+    }
+    
+    setTabletCheckerboardVisible(visible) {
+        if (!this.tabletMaterial) return;
+        
+        if (visible) {
+            if (!this.tabletCheckerboardTexture) {
+                this.tabletCheckerboardTexture = this.createTabletCheckerboardTexture();
+            }
+            this.tabletMaterial.map = this.tabletCheckerboardTexture;
+            // Keep original roughness to avoid shininess, but use white base color for brightness
+            this.tabletMaterial.roughness = 0.7;
+            this.tabletMaterial.metalness = 0.2;
+            this.tabletMaterial.color.setHex(0xffffff); // White base to make colors appear brighter
+            this.tabletMaterial.needsUpdate = true;
+        } else {
+            this.tabletMaterial.map = null;
+            this.tabletMaterial.color.setHex(this.tabletBaseColor);
+            // Restore original material properties
+            this.tabletMaterial.roughness = 0.7;
+            this.tabletMaterial.metalness = 0.2;
+            this.tabletMaterial.needsUpdate = true;
         }
     }
     

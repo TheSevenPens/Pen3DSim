@@ -135,6 +135,13 @@
                     <span>Pen shadow</span>
                 </label>
             </div>
+
+            <div class="control-group">
+                <label style="display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox" id="tablet-checkerboard" style="width: auto; margin: 0;">
+                    <span>Tablet checkerboard</span>
+                </label>
+            </div>
         </div>
     </div>
 
@@ -342,6 +349,13 @@
     sim.setPenShadowVisible(penShadowVisibleCheckbox.checked);
     penShadowVisibleCheckbox.addEventListener('change', (e) => {
         sim.setPenShadowVisible(e.target.checked);
+    });
+    
+    // Tablet checkerboard checkbox
+    const tabletCheckerboardCheckbox = document.getElementById('tablet-checkerboard');
+    sim.setTabletCheckerboardVisible(tabletCheckerboardCheckbox.checked);
+    tabletCheckerboardCheckbox.addEventListener('change', (e) => {
+        sim.setTabletCheckerboardVisible(e.target.checked);
     });
     
     // All annotations on/off buttons
