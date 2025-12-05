@@ -49,36 +49,7 @@
 
 
 
-    <div class="control-group">
-        <label>Cursor X offset: <span class="slider-value"><span id="cursor-offset-x-value">0.00</span> in</span></label>
-        <input type="range" id="cursor-offset-x" min="-5" max="5" step="0.05" value="0">
-    </div>
-
-    <div class="control-group">
-        <label>Cursor Y offset: <span class="slider-value"><span id="cursor-offset-y-value">0.00</span> in</span></label>
-        <input type="range" id="cursor-offset-y" min="-5" max="5" step="0.05" value="0">
-    </div>
-
-    <div class="control-group">
-        <label>Tilt Compensation PosTiltX: <span class="slider-value"><span id="tilt-compensation-postiltx-value-display">0.00</span></span></label>
-        <input type="range" id="tilt-compensation-postiltx-value" min="0" max="1" step="0.05" value="0">
-    </div>
-
-    <div class="control-group">
-        <label>Tilt Compensation NegTiltX: <span class="slider-value"><span id="tilt-compensation-negtiltx-value-display">0.00</span></span></label>
-        <input type="range" id="tilt-compensation-negtiltx-value" min="0" max="1" step="0.05" value="0">
-    </div>
-
-    <div class="control-group">
-        <label>Tilt Compensation PosTiltY: <span class="slider-value"><span id="tilt-compensation-postilty-value-display">0.00</span></span></label>
-        <input type="range" id="tilt-compensation-postilty-value" min="0" max="1" step="0.05" value="0">
-    </div>
-
-    <div class="control-group">
-        <label>Tilt Compensation NegTiltY: <span class="slider-value"><span id="tilt-compensation-negtilty-value-display">0.00</span></span></label>
-        <input type="range" id="tilt-compensation-negtilty-value" min="0" max="1" step="0.05" value="0">
-    </div>
-
+    <button id="pointer-tracking-flyout-btn" class="flyout-trigger-btn">Pointer tracking</button>
     <button id="annotations-flyout-btn" class="flyout-trigger-btn">Annotations</button>
     
     <div class="checkbox-grid">
@@ -163,6 +134,45 @@
                     <input type="checkbox" id="tablet-checkerboard" style="width: auto; margin: 0;">
                     <span>Tablet checkerboard</span>
                 </label>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pointer Tracking Flyout -->
+    <div id="pointer-tracking-flyout" class="flyout-panel">
+        <div class="flyout-header">
+            <h3>Pointer Tracking</h3>
+            <button id="pointer-tracking-flyout-close" class="flyout-close-btn">×</button>
+        </div>
+        <div class="flyout-content">
+            <div class="control-group">
+                <label>Cursor X offset: <span class="slider-value"><span id="cursor-offset-x-value">0.00</span> in</span></label>
+                <input type="range" id="cursor-offset-x" min="-5" max="5" step="0.05" value="0">
+            </div>
+
+            <div class="control-group">
+                <label>Cursor Y offset: <span class="slider-value"><span id="cursor-offset-y-value">0.00</span> in</span></label>
+                <input type="range" id="cursor-offset-y" min="-5" max="5" step="0.05" value="0">
+            </div>
+
+            <div class="control-group">
+                <label>Tilt Compensation PosTiltX: <span class="slider-value"><span id="tilt-compensation-postiltx-value-display">0.00</span></span></label>
+                <input type="range" id="tilt-compensation-postiltx-value" min="0" max="1" step="0.05" value="0">
+            </div>
+
+            <div class="control-group">
+                <label>Tilt Compensation NegTiltX: <span class="slider-value"><span id="tilt-compensation-negtiltx-value-display">0.00</span></span></label>
+                <input type="range" id="tilt-compensation-negtiltx-value" min="0" max="1" step="0.05" value="0">
+            </div>
+
+            <div class="control-group">
+                <label>Tilt Compensation PosTiltY: <span class="slider-value"><span id="tilt-compensation-postilty-value-display">0.00</span></span></label>
+                <input type="range" id="tilt-compensation-postilty-value" min="0" max="1" step="0.05" value="0">
+            </div>
+
+            <div class="control-group">
+                <label>Tilt Compensation NegTiltY: <span class="slider-value"><span id="tilt-compensation-negtilty-value-display">0.00</span></span></label>
+                <input type="range" id="tilt-compensation-negtilty-value" min="0" max="1" step="0.05" value="0">
             </div>
         </div>
     </div>
@@ -703,15 +713,37 @@
         }
     });
     
-    // Annotations and Animations flyout toggles
+    // Annotations, Animations, and Pointer Tracking flyout toggles
+    const pointerTrackingFlyoutBtn = document.getElementById('pointer-tracking-flyout-btn');
+    const pointerTrackingFlyout = document.getElementById('pointer-tracking-flyout');
+    const pointerTrackingFlyoutClose = document.getElementById('pointer-tracking-flyout-close');
     const annotationsFlyoutBtn = document.getElementById('annotations-flyout-btn');
     const annotationsFlyout = document.getElementById('annotations-flyout');
     const annotationsFlyoutClose = document.getElementById('annotations-flyout-close');
     const animationsFlyoutBtn = document.getElementById('animations-flyout-btn');
+    // animationsFlyout is already declared earlier
     const animationsFlyoutClose = document.getElementById('animations-flyout-close');
     
+    pointerTrackingFlyoutBtn.addEventListener('click', () => {
+        // Close other flyouts if open
+        if (annotationsFlyout.classList.contains('open')) {
+            annotationsFlyout.classList.remove('open');
+        }
+        if (animationsFlyout.classList.contains('open')) {
+            animationsFlyout.classList.remove('open');
+        }
+        pointerTrackingFlyout.classList.toggle('open');
+    });
+    
+    pointerTrackingFlyoutClose.addEventListener('click', () => {
+        pointerTrackingFlyout.classList.remove('open');
+    });
+    
     annotationsFlyoutBtn.addEventListener('click', () => {
-        // Close animations flyout if open
+        // Close other flyouts if open
+        if (pointerTrackingFlyout.classList.contains('open')) {
+            pointerTrackingFlyout.classList.remove('open');
+        }
         if (animationsFlyout.classList.contains('open')) {
             animationsFlyout.classList.remove('open');
         }
@@ -723,7 +755,10 @@
     });
     
     animationsFlyoutBtn.addEventListener('click', () => {
-        // Close annotations flyout if open
+        // Close other flyouts if open
+        if (pointerTrackingFlyout.classList.contains('open')) {
+            pointerTrackingFlyout.classList.remove('open');
+        }
         if (annotationsFlyout.classList.contains('open')) {
             annotationsFlyout.classList.remove('open');
         }
