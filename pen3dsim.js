@@ -20,6 +20,8 @@ class Pen3DSim {
         this.cursorTipRotationY = 90; // degrees around Y axis at tip
         this.cursorOffsetX = 0; // cursor X offset in inches
         this.cursorOffsetY = 0; // cursor Y offset in inches (Z axis in 3D space)
+        this.tiltCompensationPosTiltXValue = 0; // tilt compensation value (0-1) for positive tiltX
+        this.tiltCompensationNegTiltXValue = 0; // tilt compensation value (0-1) for negative tiltX
         
         // Constants
         this.tabletWidth = 16;
@@ -878,9 +880,23 @@ class Pen3DSim {
         this.penAxisLineGeometry.attributes.position.needsUpdate = true;
         this.penAxisLine.computeLineDistances();
         
+        // Calculate tilt compensation offset if value is non-zero
+        let tiltCompensationOffsetX = 0;
+        // Calculate tiltX once for compensation calculation
+        const tiltXForCompensation = this.calculateTiltX(altitude, azimuth);
+        // tiltX is in degrees, compensation value (0-1) scales the effect
+        // Use a scale factor to convert degrees to inches (0.01 inches per degree per unit compensation)
+        if (tiltXForCompensation > 0 && this.tiltCompensationPosTiltXValue > 0) {
+            // Offset to the right based on positive tiltX
+            tiltCompensationOffsetX = tiltXForCompensation * this.tiltCompensationPosTiltXValue * 0.01;
+        } else if (tiltXForCompensation < 0 && this.tiltCompensationNegTiltXValue > 0) {
+            // Offset to the left based on negative tiltX (negative offset)
+            tiltCompensationOffsetX = tiltXForCompensation * this.tiltCompensationNegTiltXValue * 0.01;
+        }
+        
         // Update cursor arrow position to point directly below pen tip, with offset
         this.cursorArrow.position.set(
-            this.penTipLineBottom.x + this.cursorOffsetX,
+            this.penTipLineBottom.x + this.cursorOffsetX + tiltCompensationOffsetX,
             this.yOffset,
             this.penTipLineBottom.z + this.cursorOffsetY
         );
@@ -1280,26 +1296,26 @@ class Pen3DSim {
     
     setCursorOffsetX(value) {
         this.cursorOffsetX = value;
-        // Update cursor position directly without recalculating pen transform
-        if (this.cursorArrow) {
-            this.cursorArrow.position.set(
-                this.penTipLineBottom.x + this.cursorOffsetX,
-                this.yOffset,
-                this.penTipLineBottom.z + this.cursorOffsetY
-            );
-        }
+        // Recalculate pen transform to apply tilt compensation
+        this.updatePenTransform(this.distance, this.tiltAltitude, this.tiltAzimuth, this.barrelRotation);
     }
     
     setCursorOffsetY(value) {
         this.cursorOffsetY = value;
-        // Update cursor position directly without recalculating pen transform
-        if (this.cursorArrow) {
-            this.cursorArrow.position.set(
-                this.penTipLineBottom.x + this.cursorOffsetX,
-                this.yOffset,
-                this.penTipLineBottom.z + this.cursorOffsetY
-            );
-        }
+        // Recalculate pen transform to apply tilt compensation
+        this.updatePenTransform(this.distance, this.tiltAltitude, this.tiltAzimuth, this.barrelRotation);
+    }
+    
+    setTiltCompensationPosTiltXValue(value) {
+        this.tiltCompensationPosTiltXValue = value;
+        // Recalculate pen transform to apply tilt compensation
+        this.updatePenTransform(this.distance, this.tiltAltitude, this.tiltAzimuth, this.barrelRotation);
+    }
+    
+    setTiltCompensationNegTiltXValue(value) {
+        this.tiltCompensationNegTiltXValue = value;
+        // Recalculate pen transform to apply tilt compensation
+        this.updatePenTransform(this.distance, this.tiltAltitude, this.tiltAzimuth, this.barrelRotation);
     }
     
     setAzimuthAnnotationsVisible(visible) {
