@@ -24,6 +24,7 @@ class Pen3DSim {
         this.tiltCompensationNegTiltXValue = 0; // tilt compensation value (0-1) for negative tiltX
         this.tiltCompensationPosTiltYValue = 0; // tilt compensation value (0-1) for positive tiltY
         this.tiltCompensationNegTiltYValue = 0; // tilt compensation value (0-1) for negative tiltY
+        this.scalingFactor = 1; // scaling factor for cursor position (0-2), 1 = no scaling
         
         // Constants
         this.tabletWidth = 16;
@@ -905,11 +906,25 @@ class Pen3DSim {
             tiltCompensationOffsetZ = tiltYForCompensation * this.tiltCompensationNegTiltYValue * 0.01;
         }
         
+        // Calculate cursor position with scaling factor
+        // Tablet center is at (0, 0) in world coordinates
+        // Scaling factor scales the distance from center
+        let cursorX, cursorZ;
+        if (this.scalingFactor > 0) {
+            // Scale position away from center (0, 0)
+            cursorX = this.penTipLineBottom.x * this.scalingFactor + this.cursorOffsetX + tiltCompensationOffsetX;
+            cursorZ = this.penTipLineBottom.z * this.scalingFactor + this.cursorOffsetY + tiltCompensationOffsetZ;
+        } else {
+            // When scaling factor is 0, cursor stays at center
+            cursorX = this.cursorOffsetX + tiltCompensationOffsetX;
+            cursorZ = this.cursorOffsetY + tiltCompensationOffsetZ;
+        }
+        
         // Update cursor arrow position to point directly below pen tip, with offset
         this.cursorArrow.position.set(
-            this.penTipLineBottom.x + this.cursorOffsetX + tiltCompensationOffsetX,
+            cursorX,
             this.yOffset,
-            this.penTipLineBottom.z + this.cursorOffsetY + tiltCompensationOffsetZ
+            cursorZ
         );
         
         // Update tilt altitude arc annotation
@@ -1338,6 +1353,12 @@ class Pen3DSim {
     setTiltCompensationNegTiltYValue(value) {
         this.tiltCompensationNegTiltYValue = value;
         // Recalculate pen transform to apply tilt compensation
+        this.updatePenTransform(this.distance, this.tiltAltitude, this.tiltAzimuth, this.barrelRotation);
+    }
+    
+    setScalingFactor(value) {
+        this.scalingFactor = value;
+        // Recalculate pen transform to apply scaling
         this.updatePenTransform(this.distance, this.tiltAltitude, this.tiltAzimuth, this.barrelRotation);
     }
     

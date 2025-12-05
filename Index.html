@@ -174,6 +174,11 @@
                 <label>Tilt Compensation NegTiltY: <span class="slider-value"><span id="tilt-compensation-negtilty-value-display">0.00</span></span></label>
                 <input type="range" id="tilt-compensation-negtilty-value" min="0" max="1" step="0.05" value="0">
             </div>
+
+            <div class="control-group">
+                <label>Scaling factor: <span class="slider-value"><span id="scaling-factor-value-display">1.00</span></span></label>
+                <input type="range" id="scaling-factor-value" min="0" max="2" step="0.05" value="1">
+            </div>
         </div>
     </div>
 
@@ -360,6 +365,16 @@
         const value = parseFloat(e.target.value);
         tiltCompensationNegTiltYValueDisplay.textContent = value.toFixed(2);
         sim.setTiltCompensationNegTiltYValue(value);
+    });
+    
+    // Scaling factor controls
+    const scalingFactorSlider = document.getElementById('scaling-factor-value');
+    const scalingFactorValueDisplay = document.getElementById('scaling-factor-value-display');
+    
+    scalingFactorSlider.addEventListener('input', (e) => {
+        const value = parseFloat(e.target.value);
+        scalingFactorValueDisplay.textContent = value.toFixed(2);
+        sim.setScalingFactor(value);
     });
     
     // Handle window resize
