@@ -22,6 +22,8 @@ class Pen3DSim {
         this.cursorOffsetY = 0; // cursor Y offset in inches (Z axis in 3D space)
         this.tiltCompensationPosTiltXValue = 0; // tilt compensation value (0-1) for positive tiltX
         this.tiltCompensationNegTiltXValue = 0; // tilt compensation value (0-1) for negative tiltX
+        this.tiltCompensationPosTiltYValue = 0; // tilt compensation value (0-1) for positive tiltY
+        this.tiltCompensationNegTiltYValue = 0; // tilt compensation value (0-1) for negative tiltY
         
         // Constants
         this.tabletWidth = 16;
@@ -882,9 +884,11 @@ class Pen3DSim {
         
         // Calculate tilt compensation offset if value is non-zero
         let tiltCompensationOffsetX = 0;
-        // Calculate tiltX once for compensation calculation
+        let tiltCompensationOffsetZ = 0;
+        // Calculate tiltX and tiltY once for compensation calculation
         const tiltXForCompensation = this.calculateTiltX(altitude, azimuth);
-        // tiltX is in degrees, compensation value (0-1) scales the effect
+        const tiltYForCompensation = this.calculateTiltY(altitude, azimuth);
+        // tiltX and tiltY are in degrees, compensation value (0-1) scales the effect
         // Use a scale factor to convert degrees to inches (0.01 inches per degree per unit compensation)
         if (tiltXForCompensation > 0 && this.tiltCompensationPosTiltXValue > 0) {
             // Offset to the right based on positive tiltX
@@ -893,12 +897,19 @@ class Pen3DSim {
             // Offset to the left based on negative tiltX (negative offset)
             tiltCompensationOffsetX = tiltXForCompensation * this.tiltCompensationNegTiltXValue * 0.01;
         }
+        if (tiltYForCompensation > 0 && this.tiltCompensationPosTiltYValue > 0) {
+            // Offset based on positive tiltY (affects Z axis)
+            tiltCompensationOffsetZ = tiltYForCompensation * this.tiltCompensationPosTiltYValue * 0.01;
+        } else if (tiltYForCompensation < 0 && this.tiltCompensationNegTiltYValue > 0) {
+            // Offset based on negative tiltY (affects Z axis, negative offset)
+            tiltCompensationOffsetZ = tiltYForCompensation * this.tiltCompensationNegTiltYValue * 0.01;
+        }
         
         // Update cursor arrow position to point directly below pen tip, with offset
         this.cursorArrow.position.set(
             this.penTipLineBottom.x + this.cursorOffsetX + tiltCompensationOffsetX,
             this.yOffset,
-            this.penTipLineBottom.z + this.cursorOffsetY
+            this.penTipLineBottom.z + this.cursorOffsetY + tiltCompensationOffsetZ
         );
         
         // Update tilt altitude arc annotation
@@ -1314,6 +1325,18 @@ class Pen3DSim {
     
     setTiltCompensationNegTiltXValue(value) {
         this.tiltCompensationNegTiltXValue = value;
+        // Recalculate pen transform to apply tilt compensation
+        this.updatePenTransform(this.distance, this.tiltAltitude, this.tiltAzimuth, this.barrelRotation);
+    }
+    
+    setTiltCompensationPosTiltYValue(value) {
+        this.tiltCompensationPosTiltYValue = value;
+        // Recalculate pen transform to apply tilt compensation
+        this.updatePenTransform(this.distance, this.tiltAltitude, this.tiltAzimuth, this.barrelRotation);
+    }
+    
+    setTiltCompensationNegTiltYValue(value) {
+        this.tiltCompensationNegTiltYValue = value;
         // Recalculate pen transform to apply tilt compensation
         this.updatePenTransform(this.distance, this.tiltAltitude, this.tiltAzimuth, this.barrelRotation);
     }
