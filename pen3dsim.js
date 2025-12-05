@@ -129,11 +129,7 @@ class Pen3DSim {
     
     initTablet() {
         const geometry = new THREE.BoxGeometry(16, 0.1, 9);
-        const material = new THREE.MeshStandardMaterial({
-            color: 0x505050,
-            roughness: 0.7,
-            metalness: 0.2
-        });
+        const material = MaterialsFactory.createTabletMaterial();
         const tablet = new THREE.Mesh(geometry, material);
         tablet.castShadow = true;
         tablet.receiveShadow = true;
@@ -147,12 +143,12 @@ class Pen3DSim {
         
         const wireframe = new THREE.LineSegments(
             new THREE.EdgesGeometry(geometry),
-            new THREE.LineBasicMaterial({ color: 0x808080, linewidth: 1 })
+            MaterialsFactory.createTabletWireframeMaterial()
         );
         tablet.add(wireframe);
         
         const gridGroup = new THREE.Group();
-        const gridMaterial = new THREE.LineBasicMaterial({ color: 0x5a5a5a, linewidth: 1 });
+        const gridMaterial = MaterialsFactory.createGridMaterial();
         const gridSpacing = 0.5;
         
         for (let x = -this.tabletWidth / 2; x <= this.tabletWidth / 2; x += gridSpacing) {
@@ -180,75 +176,11 @@ class Pen3DSim {
         this.scene.add(gridHelper);
     }
     
-    createCheckerboardTexture() {
-        const canvas = document.createElement('canvas');
-        canvas.width = 512;
-        canvas.height = 512;
-        const context = canvas.getContext('2d');
-        
-        const checkSize = 256;
-        const checksX = canvas.width / checkSize;
-        const checksY = canvas.height / checkSize;
-        
-        const checkColor1 = '#ff77dd';
-        const checkColor2 = '#aa33bb';
-        for (let y = 0; y < checksY; y++) {
-            for (let x = 0; x < checksX; x++) {
-                const isEven = (x + y) % 2 === 0;
-                context.fillStyle = isEven ? checkColor1 : checkColor2;
-                context.fillRect(x * checkSize, y * checkSize, checkSize, checkSize);
-            }
-        }
-        
-        const texture = new THREE.CanvasTexture(canvas);
-        texture.magFilter = THREE.NearestFilter;
-        texture.minFilter = THREE.NearestFilter;
-        return texture;
-    }
-    
-    createTabletCheckerboardTexture() {
-        // Grid spacing is 0.25 inches, tablet is 16x9 inches
-        // So we need 64x36 squares
-        const gridSpacing = 0.25;
-        const squaresX = this.tabletWidth / gridSpacing; // 64
-        const squaresZ = this.tabletDepth / gridSpacing; // 36
-        
-        // Create a high-resolution texture for crisp squares
-        // Use aspect ratio to ensure squares appear square on the tablet
-        const baseTextureSize = 512;
-        const canvas = document.createElement('canvas');
-        canvas.width = baseTextureSize;
-        canvas.height = Math.round(baseTextureSize * (this.tabletDepth / this.tabletWidth)); // Account for aspect ratio
-        const context = canvas.getContext('2d');
-        
-        const squareSizeX = canvas.width / squaresX;
-        const squareSizeZ = canvas.height / squaresZ;
-        
-        // Use brighter colors for better visibility
-        const checkColor1 = '#505050'; // Medium gray
-        const checkColor2 = '#404040'; // Light gray
-        
-        for (let z = 0; z < squaresZ; z++) {
-            for (let x = 0; x < squaresX; x++) {
-                const isEven = (x + z) % 2 === 0;
-                context.fillStyle = isEven ? checkColor1 : checkColor2;
-                context.fillRect(x * squareSizeX, z * squareSizeZ, squareSizeX, squareSizeZ);
-            }
-        }
-        
-        const texture = new THREE.CanvasTexture(canvas);
-        texture.magFilter = THREE.NearestFilter;
-        texture.minFilter = THREE.NearestFilter;
-        texture.wrapS = THREE.RepeatWrapping;
-        texture.wrapT = THREE.RepeatWrapping;
-        texture.repeat.set(1, 1);
-        return texture;
-    }
     
     initPen() {
         this.penGroup = new THREE.Group();
         
-        const checkerboardTexture = this.createCheckerboardTexture();
+        const checkerboardTexture = TexturesFactory.createCheckerboardTexture();
         checkerboardTexture.wrapS = THREE.RepeatWrapping;
         checkerboardTexture.wrapT = THREE.RepeatWrapping;
         
@@ -258,11 +190,7 @@ class Pen3DSim {
         tipTexture.needsUpdate = true;
         tipTexture.repeat.set(2, 1);
         
-        const tipMaterial = new THREE.MeshStandardMaterial({
-            map: tipTexture,
-            roughness: 0.8,
-            metalness: 0.1
-        });
+        const tipMaterial = MaterialsFactory.createPenMaterial(tipTexture);
         const penTip = new THREE.Mesh(tipGeometry, tipMaterial);
         penTip.castShadow = true;
         penTip.rotation.x = Math.PI;
@@ -276,11 +204,7 @@ class Pen3DSim {
         barrelTexture.needsUpdate = true;
         barrelTexture.repeat.set(2, 2);
         
-        const barrelMaterial = new THREE.MeshStandardMaterial({
-            map: barrelTexture,
-            roughness: 0.8,
-            metalness: 0.1
-        });
+        const barrelMaterial = MaterialsFactory.createPenMaterial(barrelTexture);
         const penBarrel = new THREE.Mesh(barrelGeometry, barrelMaterial);
         penBarrel.castShadow = true;
         penBarrel.position.y = barrelHeight / 2;
@@ -295,7 +219,7 @@ class Pen3DSim {
         this.penLineGeometry = new THREE.BufferGeometry();
         this.penLineGeometry.setAttribute('position', new THREE.BufferAttribute(this.penLinePositions, 3));
         
-        const penLineMaterial = this.createDashedLineMaterial(0xffff00);
+        const penLineMaterial = MaterialsFactory.createDashedLineMaterial(0xffff00);
         this.penLine = new THREE.Line(this.penLineGeometry, penLineMaterial);
         this.scene.add(this.penLine);
         
@@ -304,7 +228,7 @@ class Pen3DSim {
         this.penTipLineGeometry = new THREE.BufferGeometry();
         this.penTipLineGeometry.setAttribute('position', new THREE.BufferAttribute(this.penTipLinePositions, 3));
         
-        const penTipLineMaterial = this.createDashedLineMaterial(0xffff00);
+        const penTipLineMaterial = MaterialsFactory.createDashedLineMaterial(0xffff00);
         this.penTipLine = new THREE.Line(this.penTipLineGeometry, penTipLineMaterial);
         this.scene.add(this.penTipLine);
         
@@ -313,7 +237,7 @@ class Pen3DSim {
         this.penAxisLineGeometry = new THREE.BufferGeometry();
         this.penAxisLineGeometry.setAttribute('position', new THREE.BufferAttribute(this.penAxisLinePositions, 3));
         
-        const penAxisLineMaterial = this.createDashedLineMaterial(0xffffff);
+        const penAxisLineMaterial = MaterialsFactory.createDashedLineMaterial(0xffffff);
         this.penAxisLine = new THREE.Line(this.penAxisLineGeometry, penAxisLineMaterial);
         this.scene.add(this.penAxisLine);
         
@@ -356,10 +280,7 @@ class Pen3DSim {
         const geometry = new THREE.ShapeGeometry(shape);
         
         // White fill with black outline
-        const material = new THREE.MeshBasicMaterial({
-            color: 0xffffff,
-            side: THREE.DoubleSide
-        });
+        const material = MaterialsFactory.createCursorMaterial();
         
         const mesh = new THREE.Mesh(geometry, material);
         
@@ -415,7 +336,7 @@ class Pen3DSim {
         
         // Add black outline
         const edges = new THREE.EdgesGeometry(geometry);
-        const lineMaterial = new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 2 });
+        const lineMaterial = MaterialsFactory.createCursorOutlineMaterial();
         const wireframe = new THREE.LineSegments(edges, lineMaterial);
         mesh.add(wireframe);
         
@@ -425,37 +346,32 @@ class Pen3DSim {
     initAnnotations() {
         // Arc annotation group (azimuth)
         this.arcAnnotationGroup = new THREE.Group();
-        const arcMaterial = new THREE.MeshBasicMaterial({ color: this.azimuthColor });
+        const arcMaterial = MaterialsFactory.createArcMaterial(this.azimuthColor);
         const arcThickness = 0.02;
         
         const arcGeometry = new THREE.BufferGeometry();
         this.arcLine = new THREE.Mesh(arcGeometry, arcMaterial);
         this.arcAnnotationGroup.add(this.arcLine);
         
-        const arrowMaterial = new THREE.LineBasicMaterial({ color: this.azimuthColor, linewidth: 2 });
+        const arrowMaterial = MaterialsFactory.createArrowMaterial(this.azimuthColor);
         const arrowGeometry = new THREE.BufferGeometry();
         const arrowLine = new THREE.Line(arrowGeometry, arrowMaterial);
         arrowLine.visible = false;
         this.arcAnnotationGroup.add(arrowLine);
         
-        const dottedArcMaterial = this.createDashedLineMaterial(this.azimuthColor, 2);
+        const dottedArcMaterial = MaterialsFactory.createDottedCircleMaterial(this.azimuthColor);
         const dottedArcGeometry = new THREE.BufferGeometry();
         this.dottedArcLine = new THREE.Line(dottedArcGeometry, dottedArcMaterial);
         this.arcAnnotationGroup.add(this.dottedArcLine);
         
-        this.arcPieMaterial = new THREE.MeshBasicMaterial({ 
-            color: this.azimuthColor, 
-            transparent: true, 
-            opacity: 0.3,
-            side: THREE.DoubleSide
-        });
+        this.arcPieMaterial = MaterialsFactory.createPieMaterial(this.azimuthColor);
         this.arcPieMesh = null;
         
         this.scene.add(this.arcAnnotationGroup);
         
         // Surface line
         this.surfaceLineGeometry = new THREE.BufferGeometry();
-        const surfaceLineMaterial = new THREE.LineBasicMaterial({ color: this.azimuthColor, linewidth: 2 });
+        const surfaceLineMaterial = MaterialsFactory.createSurfaceLineMaterial(this.azimuthColor);
         this.surfaceLine = new THREE.Line(this.surfaceLineGeometry, surfaceLineMaterial);
         this.scene.add(this.surfaceLine);
         
@@ -467,8 +383,8 @@ class Pen3DSim {
         // Barrel rotation annotations
         this.barrelAnnotationGroup = new THREE.Group();
         const barrelArcThickness = 0.02;
-        const barrelAnnotationMaterial = new THREE.MeshBasicMaterial({ color: 0xff8800 });
-        const barrelArrowMaterial = new THREE.LineBasicMaterial({ color: 0xff8800, linewidth: 2 });
+        const barrelAnnotationMaterial = MaterialsFactory.createArcMaterial(0xff8800);
+        const barrelArrowMaterial = MaterialsFactory.createArrowMaterial(0xff8800);
         
         const barrelArcGeometry = new THREE.BufferGeometry();
         this.barrelArcLine = new THREE.Mesh(barrelArcGeometry, barrelAnnotationMaterial);
@@ -488,92 +404,72 @@ class Pen3DSim {
         barrelSurfaceArrowLine.visible = false;
         this.barrelAnnotationGroup.add(barrelSurfaceArrowLine);
         
-        const barrelDottedCircleMaterial = this.createDashedLineMaterial(0xff8800, 2);
+        const barrelDottedCircleMaterial = MaterialsFactory.createDottedCircleMaterial(0xff8800);
         const barrelDottedCircleGeometry = new THREE.BufferGeometry();
         this.barrelDottedCircleLine = new THREE.Line(barrelDottedCircleGeometry, barrelDottedCircleMaterial);
         this.barrelAnnotationGroup.add(this.barrelDottedCircleLine);
         
-        this.barrelPieMaterial = new THREE.MeshBasicMaterial({ 
-            color: 0xff8800, 
-            transparent: true, 
-            opacity: 0.3,
-            side: THREE.DoubleSide
-        });
+        this.barrelPieMaterial = MaterialsFactory.createPieMaterial(0xff8800);
         this.barrelPieMesh = null;
         
         this.scene.add(this.barrelAnnotationGroup);
         
         // Tilt altitude arc annotation
         const tiltAltitudeArcThickness = 0.02;
-        const tiltAltitudeArcMaterial = new THREE.MeshBasicMaterial({ color: this.tiltAltitudeColor });
+        const tiltAltitudeArcMaterial = MaterialsFactory.createArcMaterial(this.tiltAltitudeColor);
         const tiltAltitudeArcGeometry = new THREE.BufferGeometry();
         this.tiltAltitudeArcLine = new THREE.Mesh(tiltAltitudeArcGeometry, tiltAltitudeArcMaterial);
         this.scene.add(this.tiltAltitudeArcLine);
         
-        this.tiltAltitudePieMaterial = new THREE.MeshBasicMaterial({ 
-            color: this.tiltAltitudeColor, 
-            transparent: true, 
-            opacity: 0.3,
-            side: THREE.DoubleSide
-        });
+        this.tiltAltitudePieMaterial = MaterialsFactory.createPieMaterial(this.tiltAltitudeColor);
         this.tiltAltitudePieMesh = null;
         
-        const tiltAltitudeVerticalLineMaterial = new THREE.LineBasicMaterial({ color: this.tiltAltitudeColor, linewidth: 2 });
+        const tiltAltitudeVerticalLineMaterial = MaterialsFactory.createVerticalLineMaterial(this.tiltAltitudeColor);
         const tiltAltitudeVerticalLineGeometry = new THREE.BufferGeometry();
         this.tiltAltitudeVerticalLine = new THREE.Line(tiltAltitudeVerticalLineGeometry, tiltAltitudeVerticalLineMaterial);
         this.scene.add(this.tiltAltitudeVerticalLine);
         
-        const tiltAltitudeSemicircleMaterial = this.createDashedLineMaterial(this.tiltAltitudeColor, 2);
+        const tiltAltitudeSemicircleMaterial = MaterialsFactory.createDottedCircleMaterial(this.tiltAltitudeColor);
         const tiltAltitudeSemicircleGeometry = new THREE.BufferGeometry();
         this.tiltAltitudeSemicircleLine = new THREE.Line(tiltAltitudeSemicircleGeometry, tiltAltitudeSemicircleMaterial);
         this.scene.add(this.tiltAltitudeSemicircleLine);
         
         // Tilt X annotation
         const tiltXArcThickness = 0.02;
-        const tiltXArcMaterial = new THREE.MeshBasicMaterial({ color: 0x88ccff });
+        const tiltXArcMaterial = MaterialsFactory.createArcMaterial(0x88ccff);
         const tiltXArcGeometry = new THREE.BufferGeometry();
         this.tiltXArcLine = new THREE.Mesh(tiltXArcGeometry, tiltXArcMaterial);
         this.scene.add(this.tiltXArcLine);
         
-        this.tiltXPieMaterial = new THREE.MeshBasicMaterial({ 
-            color: 0x88ccff, 
-            transparent: true, 
-            opacity: 0.3,
-            side: THREE.DoubleSide
-        });
+        this.tiltXPieMaterial = MaterialsFactory.createPieMaterial(0x88ccff);
         this.tiltXPieMesh = null;
         
-        const tiltXVerticalLineMaterial = new THREE.LineBasicMaterial({ color: 0x88ccff, linewidth: 2 });
+        const tiltXVerticalLineMaterial = MaterialsFactory.createVerticalLineMaterial(0x88ccff);
         const tiltXVerticalLineGeometry = new THREE.BufferGeometry();
         this.tiltXVerticalLine = new THREE.Line(tiltXVerticalLineGeometry, tiltXVerticalLineMaterial);
         this.scene.add(this.tiltXVerticalLine);
         
-        const tiltXDottedCircleMaterial = this.createDashedLineMaterial(0x88ccff, 2);
+        const tiltXDottedCircleMaterial = MaterialsFactory.createDottedCircleMaterial(0x88ccff);
         const tiltXDottedCircleGeometry = new THREE.BufferGeometry();
         this.tiltXDottedCircleLine = new THREE.Line(tiltXDottedCircleGeometry, tiltXDottedCircleMaterial);
         this.scene.add(this.tiltXDottedCircleLine);
         
         // Tilt Y annotation
         const tiltYArcThickness = 0.02;
-        const tiltYArcMaterial = new THREE.MeshBasicMaterial({ color: 0xff88cc });
+        const tiltYArcMaterial = MaterialsFactory.createArcMaterial(0xff88cc);
         const tiltYArcGeometry = new THREE.BufferGeometry();
         this.tiltYArcLine = new THREE.Mesh(tiltYArcGeometry, tiltYArcMaterial);
         this.scene.add(this.tiltYArcLine);
         
-        this.tiltYPieMaterial = new THREE.MeshBasicMaterial({ 
-            color: 0xff88cc, 
-            transparent: true, 
-            opacity: 0.3,
-            side: THREE.DoubleSide
-        });
+        this.tiltYPieMaterial = MaterialsFactory.createPieMaterial(0xff88cc);
         this.tiltYPieMesh = null;
         
-        const tiltYVerticalLineMaterial = new THREE.LineBasicMaterial({ color: 0xff88cc, linewidth: 2 });
+        const tiltYVerticalLineMaterial = MaterialsFactory.createVerticalLineMaterial(0xff88cc);
         const tiltYVerticalLineGeometry = new THREE.BufferGeometry();
         this.tiltYVerticalLine = new THREE.Line(tiltYVerticalLineGeometry, tiltYVerticalLineMaterial);
         this.scene.add(this.tiltYVerticalLine);
         
-        const tiltYDottedCircleMaterial = this.createDashedLineMaterial(0xff88cc, 2);
+        const tiltYDottedCircleMaterial = MaterialsFactory.createDottedCircleMaterial(0xff88cc);
         const tiltYDottedCircleGeometry = new THREE.BufferGeometry();
         this.tiltYDottedCircleLine = new THREE.Line(tiltYDottedCircleGeometry, tiltYDottedCircleMaterial);
         this.scene.add(this.tiltYDottedCircleLine);
@@ -581,19 +477,8 @@ class Pen3DSim {
     
     initAxisMarkers() {
         const createTextLabel = (text, color, position) => {
-            const canvas = document.createElement('canvas');
-            const context = canvas.getContext('2d');
-            canvas.width = 64;
-            canvas.height = 64;
-            
-            context.fillStyle = color;
-            context.font = 'Bold 16px Arial';
-            context.textAlign = 'center';
-            context.textBaseline = 'middle';
-            context.fillText(text, 32, 32);
-            
-            const texture = new THREE.CanvasTexture(canvas);
-            const spriteMaterial = new THREE.SpriteMaterial({ map: texture });
+            const texture = TexturesFactory.createTextLabelTexture(text, color);
+            const spriteMaterial = MaterialsFactory.createSpriteMaterial(texture);
             const sprite = new THREE.Sprite(spriteMaterial);
             sprite.position.copy(position);
             sprite.scale.set(2, 2, 1);
@@ -848,12 +733,7 @@ class Pen3DSim {
     
     // Shared code helper methods
     createDashedLineMaterial(color, linewidth = 2) {
-        return new THREE.LineDashedMaterial({ 
-            color: color, 
-            dashSize: 0.04, 
-            gapSize: 0.025,
-            linewidth: linewidth 
-        });
+        return MaterialsFactory.createDashedLineMaterial(color, linewidth);
     }
     
     calculatePieRotationQuaternion(u, v) {
@@ -1467,7 +1347,7 @@ class Pen3DSim {
         
         if (visible) {
             if (!this.tabletCheckerboardTexture) {
-                this.tabletCheckerboardTexture = this.createTabletCheckerboardTexture();
+                this.tabletCheckerboardTexture = TexturesFactory.createTabletCheckerboardTexture(this.tabletWidth, this.tabletDepth);
             }
             this.tabletMaterial.map = this.tabletCheckerboardTexture;
             // Keep original roughness to avoid shininess, but use white base color for brightness
