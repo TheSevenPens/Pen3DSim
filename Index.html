@@ -10,8 +10,8 @@
 <div id="control-panel">
     <h1>SevenPens Pen3DSim</h1>
     <div class="control-group">
-        <label>Z: (Hover distance): <span class="slider-value"><span id="distance-value">0.1</span> in</span></label>
-        <input type="range" id="pen-distance" min="0" max="1" step="0.1" value="0">
+        <label>Z: (Hover distance): <span class="slider-value"><span id="distance-value">0.00</span> in</span></label>
+        <input type="range" id="pen-distance" min="0" max="1" step="0.05" value="0">
     </div>
 
     <div class="control-group">
@@ -196,7 +196,7 @@
 
     penDistanceSlider.addEventListener('input', (e) => {
         const distance = parseFloat(e.target.value);
-        distanceValueDisplay.textContent = distance.toFixed(1);
+        distanceValueDisplay.textContent = distance.toFixed(2);
         sim.setDistance(distance);
     });
 
@@ -412,7 +412,7 @@
         tabletPositionZSlider.value = defaults.tabletZ;
         
         // Update displays
-        distanceValueDisplay.textContent = defaults.distance.toFixed(1);
+        distanceValueDisplay.textContent = defaults.distance.toFixed(2);
         altitudeValueDisplay.textContent = defaults.tiltAltitude.toFixed(0);
         azimuthValueDisplay.textContent = defaults.tiltAzimuth.toFixed(0);
         barrelRotationValueDisplay.textContent = defaults.barrelRotation.toFixed(0);
@@ -458,7 +458,7 @@
         tabletPositionZSlider.value = demoTabletZ;
         
         // Update displays
-        distanceValueDisplay.textContent = demoDistance.toFixed(1);
+        distanceValueDisplay.textContent = demoDistance.toFixed(2);
         altitudeValueDisplay.textContent = demoTiltAltitude.toFixed(0);
         azimuthValueDisplay.textContent = demoTiltAzimuth.toFixed(0);
         barrelRotationValueDisplay.textContent = demoBarrelRotation.toFixed(0);
@@ -533,7 +533,7 @@
             tabletPositionXSlider.value = defaults.tabletX;
             tabletPositionZSlider.value = defaults.tabletZ;
             
-            distanceValueDisplay.textContent = defaults.distance.toFixed(1);
+            distanceValueDisplay.textContent = defaults.distance.toFixed(2);
             altitudeValueDisplay.textContent = defaults.tiltAltitude.toFixed(0);
             azimuthValueDisplay.textContent = defaults.tiltAzimuth.toFixed(0);
             barrelRotationValueDisplay.textContent = defaults.barrelRotation.toFixed(0);
@@ -560,7 +560,7 @@
             tabletPositionXSlider.value = current.tabletX;
             tabletPositionZSlider.value = current.tabletZ;
             
-            distanceValueDisplay.textContent = current.distance.toFixed(1);
+            distanceValueDisplay.textContent = current.distance.toFixed(2);
             altitudeValueDisplay.textContent = Math.round(current.tiltAltitude);
             azimuthValueDisplay.textContent = Math.round(current.tiltAzimuth);
             barrelRotationValueDisplay.textContent = Math.round(current.barrelRotation);
