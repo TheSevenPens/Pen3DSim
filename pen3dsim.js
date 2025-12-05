@@ -25,6 +25,8 @@ class Pen3DSim {
         this.tiltCompensationPosTiltYValue = 0; // tilt compensation value (0-1) for positive tiltY
         this.tiltCompensationNegTiltYValue = 0; // tilt compensation value (0-1) for negative tiltY
         this.scalingFactor = 1; // scaling factor for cursor position (0-2), 1 = no scaling
+        this.edgeAttraction = 0; // edge attraction value (-1 to 1), 0 = no effect
+        this.edgeAttractionRange = 1; // distance from edges where attraction is applied (in inches)
         
         // Constants
         this.tabletWidth = 16;
@@ -920,6 +922,53 @@ class Pen3DSim {
             cursorZ = this.cursorOffsetY + tiltCompensationOffsetZ;
         }
         
+        // Apply edge attraction if enabled
+        if (this.edgeAttraction !== 0 && this.edgeAttractionRange > 0) {
+            // Tablet edges: left = -8, right = 8, bottom = -4.5, top = 4.5
+            const leftEdge = -this.tabletWidth / 2;
+            const rightEdge = this.tabletWidth / 2;
+            const bottomEdge = -this.tabletDepth / 2;
+            const topEdge = this.tabletDepth / 2;
+            
+            // Calculate distances from each edge
+            const distFromLeft = cursorX - leftEdge;
+            const distFromRight = rightEdge - cursorX;
+            const distFromBottom = cursorZ - bottomEdge;
+            const distFromTop = topEdge - cursorZ;
+            
+            // Calculate attraction forces for each edge (only within range)
+            let edgeAttractionX = 0;
+            let edgeAttractionZ = 0;
+            
+            // Left edge attraction
+            if (distFromLeft <= this.edgeAttractionRange && distFromLeft >= 0) {
+                const strength = 1 - (distFromLeft / this.edgeAttractionRange); // 1 at edge, 0 at range
+                edgeAttractionX += this.edgeAttraction * strength; // positive = attract to right (away from left edge)
+            }
+            
+            // Right edge attraction
+            if (distFromRight <= this.edgeAttractionRange && distFromRight >= 0) {
+                const strength = 1 - (distFromRight / this.edgeAttractionRange); // 1 at edge, 0 at range
+                edgeAttractionX -= this.edgeAttraction * strength; // negative = attract to left (away from right edge)
+            }
+            
+            // Bottom edge attraction
+            if (distFromBottom <= this.edgeAttractionRange && distFromBottom >= 0) {
+                const strength = 1 - (distFromBottom / this.edgeAttractionRange); // 1 at edge, 0 at range
+                edgeAttractionZ += this.edgeAttraction * strength; // positive = attract up (away from bottom edge)
+            }
+            
+            // Top edge attraction
+            if (distFromTop <= this.edgeAttractionRange && distFromTop >= 0) {
+                const strength = 1 - (distFromTop / this.edgeAttractionRange); // 1 at edge, 0 at range
+                edgeAttractionZ -= this.edgeAttraction * strength; // negative = attract down (away from top edge)
+            }
+            
+            // Apply edge attraction
+            cursorX += edgeAttractionX;
+            cursorZ += edgeAttractionZ;
+        }
+        
         // Update cursor arrow position to point directly below pen tip, with offset
         this.cursorArrow.position.set(
             cursorX,
@@ -1359,6 +1408,18 @@ class Pen3DSim {
     setScalingFactor(value) {
         this.scalingFactor = value;
         // Recalculate pen transform to apply scaling
+        this.updatePenTransform(this.distance, this.tiltAltitude, this.tiltAzimuth, this.barrelRotation);
+    }
+    
+    setEdgeAttraction(value) {
+        this.edgeAttraction = value;
+        // Recalculate pen transform to apply edge attraction
+        this.updatePenTransform(this.distance, this.tiltAltitude, this.tiltAzimuth, this.barrelRotation);
+    }
+    
+    setEdgeAttractionRange(value) {
+        this.edgeAttractionRange = value;
+        // Recalculate pen transform to apply edge attraction
         this.updatePenTransform(this.distance, this.tiltAltitude, this.tiltAzimuth, this.barrelRotation);
     }
     
