@@ -53,6 +53,136 @@ class Pen3DSim {
         
         // Initialize pen position
         this.updatePenTransform(this.distance, this.tiltAltitude, this.tiltAzimuth, this.barrelRotation);
+        
+        // Initialize mouse control for pen movement
+        this.initMouseControl();
+    }
+    
+    initMouseControl() {
+        // Track space bar state
+        this.spaceBarPressed = false;
+        
+        // Track last mouse position for delta calculation
+        this.lastMouseX = 0;
+        this.lastMouseY = 0;
+        this.isDraggingPen = false;
+        
+        // Keyboard event handlers
+        document.addEventListener('keydown', (e) => {
+            this.handleKeyDown(e);
+        });
+        
+        document.addEventListener('keyup', (e) => {
+            this.handleKeyUp(e);
+        });
+        
+        // Mouse event handlers - use capture phase to intercept before OrbitControls
+        this.renderer.domElement.addEventListener('mousedown', (e) => {
+            this.handleMouseDown(e);
+        }, true); // Use capture phase
+        
+        this.renderer.domElement.addEventListener('mousemove', (e) => {
+            this.handleMouseMove(e);
+        }, true); // Use capture phase
+        
+        this.renderer.domElement.addEventListener('mouseup', (e) => {
+            this.handleMouseUp(e);
+        }, true); // Use capture phase
+        
+        // Also handle mouse leave to reset state
+        this.renderer.domElement.addEventListener('mouseleave', (e) => {
+            this.handleMouseUp(e);
+        });
+    }
+    
+    handleKeyDown(e) {
+        if (e.code === 'Space' && !e.repeat) {
+            e.preventDefault(); // Prevent page scrolling
+            this.spaceBarPressed = true;
+            // Disable OrbitControls immediately when space bar is pressed
+            this.controls.enabled = false;
+            // Update cursor if mouse is over the viewer
+            this.renderer.domElement.style.cursor = 'move';
+        }
+    }
+    
+    handleKeyUp(e) {
+        if (e.code === 'Space') {
+            e.preventDefault(); // Prevent page scrolling
+            this.spaceBarPressed = false;
+            this.isDraggingPen = false;
+            this.renderer.domElement.style.cursor = '';
+            // Re-enable OrbitControls
+            this.controls.enabled = true;
+        }
+    }
+    
+    handleMouseDown(e) {
+        // Start dragging if space bar is pressed
+        if (this.spaceBarPressed) {
+            e.preventDefault(); // Prevent default mouse behavior
+            e.stopPropagation(); // Prevent OrbitControls from handling this event
+            this.isDraggingPen = true;
+            const rect = this.renderer.domElement.getBoundingClientRect();
+            this.lastMouseX = e.clientX - rect.left;
+            this.lastMouseY = e.clientY - rect.top;
+            this.renderer.domElement.style.cursor = 'move';
+            // OrbitControls should already be disabled, but ensure it
+            this.controls.enabled = false;
+        }
+    }
+    
+    handleMouseMove(e) {
+        if (this.isDraggingPen && this.spaceBarPressed) {
+            e.preventDefault(); // Prevent default mouse behavior
+            e.stopPropagation(); // Prevent OrbitControls from handling this event
+            const rect = this.renderer.domElement.getBoundingClientRect();
+            const currentMouseX = e.clientX - rect.left;
+            const currentMouseY = e.clientY - rect.top;
+            
+            // Calculate delta movement
+            const deltaX = currentMouseX - this.lastMouseX;
+            const deltaY = currentMouseY - this.lastMouseY;
+            
+            // Convert screen pixel movement to tablet coordinate movement
+            // Use a scaling factor to map screen pixels to inches
+            // The tablet is 16x9 inches, so we need to estimate the screen size
+            // A reasonable approach: use a fixed scale factor (e.g., 0.01 inches per pixel)
+            const scaleFactor = 0.01; // Adjust this to make movement feel natural
+            
+            // Update tablet position
+            // Invert vertical movement: mouse down moves pen forward (positive Z)
+            const newTabletX = this.tabletOffsetX + deltaX * scaleFactor;
+            const newTabletZ = this.tabletOffsetZ + deltaY * scaleFactor;
+            
+            // Clamp to tablet bounds
+            const clampedX = THREE.MathUtils.clamp(newTabletX, 0, this.tabletWidth);
+            const clampedZ = THREE.MathUtils.clamp(newTabletZ, 0, this.tabletDepth);
+            
+            this.setTabletPositionX(clampedX);
+            this.setTabletPositionZ(clampedZ);
+            
+            // Update last mouse position
+            this.lastMouseX = currentMouseX;
+            this.lastMouseY = currentMouseY;
+        } else if (this.spaceBarPressed) {
+            // Space bar is pressed but not dragging yet - update cursor
+            this.renderer.domElement.style.cursor = 'move';
+        }
+    }
+    
+    handleMouseUp(e) {
+        // Stop dragging when mouse button is released
+        if (this.isDraggingPen && this.spaceBarPressed) {
+            e.preventDefault(); // Prevent default mouse behavior
+            e.stopPropagation(); // Prevent OrbitControls from handling this event
+        }
+        this.isDraggingPen = false;
+        if (!this.spaceBarPressed) {
+            this.renderer.domElement.style.cursor = '';
+            // Re-enable OrbitControls
+            this.controls.enabled = true;
+        }
     }
     
     initScene() {
@@ -1362,11 +1492,25 @@ class Pen3DSim {
     setTabletPositionX(value) {
         this.tabletOffsetX = value;
         this.updatePenTransform(this.distance, this.tiltAltitude, this.tiltAzimuth, this.barrelRotation);
+        // Trigger custom event to update UI sliders
+        if (this.viewer) {
+            const event = new CustomEvent('tabletPositionChanged', { 
+                detail: { x: value, z: this.tabletOffsetZ } 
+            });
+            this.viewer.dispatchEvent(event);
+        }
     }
     
     setTabletPositionZ(value) {
         this.tabletOffsetZ = value;
         this.updatePenTransform(this.distance, this.tiltAltitude, this.tiltAzimuth, this.barrelRotation);
+        // Trigger custom event to update UI sliders
+        if (this.viewer) {
+            const event = new CustomEvent('tabletPositionChanged', { 
+                detail: { x: this.tabletOffsetX, z: value } 
+            });
+            this.viewer.dispatchEvent(event);
+        }
     }
     
     setCursorOffsetX(value) {

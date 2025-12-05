@@ -319,6 +319,15 @@
         sim.setTabletPositionZ(tabletZ);
     });
     
+    // Listen for tablet position changes from mouse control
+    viewer.addEventListener('tabletPositionChanged', (e) => {
+        const { x, z } = e.detail;
+        tabletPositionXSlider.value = x;
+        tabletPositionZSlider.value = z;
+        tabletPositionXValueDisplay.textContent = x.toFixed(1);
+        tabletPositionZValueDisplay.textContent = z.toFixed(1);
+    });
+    
     // Cursor offset sliders
     const cursorOffsetXSlider = document.getElementById('cursor-offset-x');
     const cursorOffsetXValueDisplay = document.getElementById('cursor-offset-x-value');
