@@ -207,11 +207,11 @@ class Pen3DSim {
     }
     
     createTabletCheckerboardTexture() {
-        // Grid spacing is 0.5 inches, tablet is 16x9 inches
-        // So we need 32x18 squares
-        const gridSpacing = 0.5;
-        const squaresX = this.tabletWidth / gridSpacing; // 32
-        const squaresZ = this.tabletDepth / gridSpacing; // 18
+        // Grid spacing is 0.25 inches, tablet is 16x9 inches
+        // So we need 64x36 squares
+        const gridSpacing = 0.25;
+        const squaresX = this.tabletWidth / gridSpacing; // 64
+        const squaresZ = this.tabletDepth / gridSpacing; // 36
         
         // Create a high-resolution texture for crisp squares
         // Use aspect ratio to ensure squares appear square on the tablet
